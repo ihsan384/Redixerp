@@ -16,7 +16,7 @@ const leadSchema = z.object({
   phone: z.string().min(6, 'Phone number must be at least 6 digits'),
   website: z.string().optional().or(z.literal('')),
   address: z.string().optional().or(z.literal('')),
-  rating: z.coerce.number().min(0).max(5).optional(),
+  rating: z.number().min(0).max(5).optional(),
   status: z.enum([
     'new',
     'called',
@@ -184,7 +184,7 @@ export function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
                   <input
                     type="number"
                     step="0.1"
-                    {...register('rating')}
+                    {...register('rating', { valueAsNumber: true })}
                     placeholder="e.g. 4.5"
                     className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-3 py-2 text-sm text-white placeholder-[#4b5563] focus:border-white/20 outline-none transition-colors"
                   />
