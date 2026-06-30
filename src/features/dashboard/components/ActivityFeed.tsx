@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion'
-import { Phone, ArrowUpRight, Clock, ThumbsUp, Calendar, CheckCircle2 } from 'lucide-react'
+import { Phone, ArrowUpRight, Clock, ThumbsUp, Calendar, CheckCircle2, User } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import type { Activity, Lead, Call } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
-import { Card } from '@/components/ui/Card'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 
 interface RecentActivityFeedProps {
   activities: Activity[]
@@ -23,39 +23,44 @@ export function RecentActivityFeed({ activities, leads }: RecentActivityFeedProp
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'call':
-        return <Phone className="w-3.5 h-3.5 text-[#8c8c8c]" />
+        return <Phone className="w-4 h-4 text-zinc-400" />
       case 'converted':
-        return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+        return <CheckCircle2 className="w-4 h-4 text-emerald-400 animate-pulse" />
       case 'follow_up':
-        return <Calendar className="w-3.5 h-3.5 text-yellow-400" />
+        return <Calendar className="w-4 h-4 text-amber-400" />
       default:
-        return <ThumbsUp className="w-3.5 h-3.5 text-[#636363]" />
+        return <ThumbsUp className="w-4 h-4 text-red-400" />
     }
   }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.6, duration: 0.4 }}
+      transition={{ delay: 0.35, duration: 0.4 }}
       className="h-full w-full"
     >
-      <Card className="h-full flex flex-col justify-between">
+      <Card className="h-full flex flex-col justify-between p-6">
         <div>
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-sm font-semibold text-white">Recent Activity</h3>
+          <div className="flex items-center justify-between mb-5 pb-2 border-b border-white/[0.04]">
+            <div>
+              <CardTitle>Recent Workspace Activity</CardTitle>
+              <CardDescription>Live operational audit trail of updates and actions</CardDescription>
+            </div>
             <button
               onClick={() => navigate('/leads')}
-              className="text-xs text-[#4b5563] hover:text-white transition-colors flex items-center gap-1"
+              className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors flex items-center gap-1 bg-red-500/5 hover:bg-red-500/10 px-2.5 py-1.5 rounded-lg border border-red-500/10"
             >
-              View Leads <ArrowUpRight className="w-3 h-3" />
+              Leads <ArrowUpRight className="w-3 h-3" />
             </button>
           </div>
 
           {recentActivities.length === 0 ? (
-            <p className="text-xs text-[#525252] italic p-6 text-center">No activities recorded yet.</p>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <p className="text-xs text-zinc-500 italic">No workspace activities logged yet.</p>
+            </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {recentActivities.map((item, i) => {
                 const lead = leads.find((l) => l.id === item.lead_id)
                 const timeString = formatDistanceToNow(new Date(item.created_at), { addSuffix: true })
@@ -63,22 +68,23 @@ export function RecentActivityFeed({ activities, leads }: RecentActivityFeedProp
                 return (
                   <motion.div
                     key={item.id}
-                    initial={{ opacity: 0, x: -10 }}
+                    initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.7 + i * 0.05 }}
-                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.01] transition-colors group"
+                    transition={{ delay: 0.4 + i * 0.04 }}
+                    className="flex items-start gap-3.5 p-3 rounded-xl hover:bg-white/[0.02] border border-transparent hover:border-white/[0.04] transition-all group cursor-pointer"
+                    onClick={() => lead && navigate(`/leads?search=${encodeURIComponent(lead.shop_name)}`)}
                   >
-                    <div className="w-8 h-8 bg-white/[0.03] border border-[#1f1f1f] rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <div className="w-9 h-9 bg-white/[0.02] border border-white/[0.06] rounded-xl flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-white/[0.04] transition-colors">
                       {getActivityIcon(item.type)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-white truncate">
-                        {lead ? lead.shop_name : 'System Activity'}
+                      <p className="text-xs font-bold text-white group-hover:text-red-400 transition-colors truncate">
+                        {lead ? lead.shop_name : 'System Event'}
                       </p>
-                      <p className="text-[11px] text-[#8c8c8c] mt-0.5 leading-snug">{item.description}</p>
+                      <p className="text-[11px] text-[#A1A1AA] mt-1 leading-snug">{item.description}</p>
                     </div>
-                    <div className="text-right flex-shrink-0 pl-2">
-                      <p className="text-[9px] text-[#525252] font-semibold uppercase">{timeString}</p>
+                    <div className="shrink-0 pl-2 text-right">
+                      <p className="text-[9px] text-[#717172] font-bold uppercase tracking-wider">{timeString}</p>
                     </div>
                   </motion.div>
                 )
@@ -106,48 +112,55 @@ export function UpcomingFollowUps({ calls, leads }: UpcomingFollowUpsProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.65, duration: 0.4 }}
+      transition={{ delay: 0.38, duration: 0.4 }}
       className="h-full w-full"
     >
-      <Card className="h-full flex flex-col justify-between">
+      <Card className="h-full flex flex-col justify-between p-6">
         <div>
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-sm font-semibold text-white">Upcoming Follow-ups</h3>
+          <div className="flex items-center justify-between mb-5 pb-2 border-b border-white/[0.04]">
+            <div>
+              <CardTitle>Upcoming Callbacks</CardTitle>
+              <CardDescription>Scheduled followup outreach targets</CardDescription>
+            </div>
             <button
               onClick={() => navigate('/follow-ups')}
-              className="text-xs text-[#4b5563] hover:text-white transition-colors flex items-center gap-1"
+              className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors flex items-center gap-1 bg-red-500/5 hover:bg-red-500/10 px-2.5 py-1.5 rounded-lg border border-red-500/10"
             >
-              View Planner <ArrowUpRight className="w-3 h-3" />
+              Planner <ArrowUpRight className="w-3 h-3" />
             </button>
           </div>
 
           {upcoming.length === 0 ? (
-            <p className="text-xs text-[#525252] italic p-6 text-center">No upcoming follow-ups scheduled.</p>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <p className="text-xs text-zinc-500 italic">No upcoming callbacks scheduled.</p>
+            </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {upcoming.map((item, i) => (
                 <motion.div
                   key={item.id}
-                  initial={{ opacity: 0, x: -10 }}
+                  initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.75 + i * 0.05 }}
+                  transition={{ delay: 0.45 + i * 0.04 }}
                   onClick={() => navigate(`/call-center?leadId=${item.lead_id}`)}
-                  className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/[0.02] cursor-pointer transition-colors group"
+                  className="flex items-start gap-3.5 p-3 rounded-xl hover:bg-white/[0.02] border border-transparent hover:border-white/[0.04] cursor-pointer transition-all group"
                 >
-                  <div className="w-8 h-8 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  <div className="w-9 h-9 bg-amber-500/5 border border-amber-500/15 rounded-xl flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-amber-500/10 transition-colors">
+                    <Clock className="w-4 h-4 text-amber-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-white truncate">{item.lead?.shop_name}</p>
-                    <p className="text-[11px] text-[#8c8c8c] mt-0.5 truncate">
-                      {item.follow_up_reminder || 'Schedule callback review.'}
+                    <p className="text-xs font-bold text-white group-hover:text-red-400 transition-colors truncate">{item.lead?.shop_name}</p>
+                    <p className="text-[11px] text-[#A1A1AA] mt-1 truncate">
+                      {item.follow_up_reminder || 'Outbound campaign review call.'}
                     </p>
                   </div>
-                  <div className="text-right flex-shrink-0 pl-2">
-                    <span className="text-[10px] font-bold text-amber-400">{item.follow_up_time || '12:00'}</span>
-                    <p className="text-[9px] text-[#525252] mt-0.5 font-bold uppercase">{item.follow_up_date}</p>
+                  <div className="shrink-0 pl-2 text-right">
+                    <span className="inline-flex h-5 items-center justify-center rounded-lg bg-amber-500/10 px-2 text-[10px] font-bold text-amber-400 border border-amber-500/15">
+                      {item.follow_up_time || '12:00'}
+                    </span>
+                    <p className="text-[9px] text-[#717172] font-bold uppercase tracking-wider mt-1">{item.follow_up_date}</p>
                   </div>
                 </motion.div>
               ))}

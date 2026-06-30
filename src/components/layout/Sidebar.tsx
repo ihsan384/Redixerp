@@ -1,223 +1,277 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
-  BarChart3,
-  Briefcase,
+  LayoutDashboard,
+  Users,
+  Phone,
   CalendarClock,
-  ChevronDown,
+  Briefcase,
+  TrendingUp,
+  Receipt,
+  BarChart3,
+  UserCheck,
+  Settings,
   ChevronLeft,
   ChevronRight,
-  LayoutDashboard,
-  LogOut,
-  Phone,
-  Receipt,
-  Settings,
-  Sparkles,
-  TrendingUp,
-  UserCheck,
-  Users,
-  X,
   Zap,
+  LogOut,
+  ChevronDown,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { cn } from '@/utils/cn'
+import { Storage } from '@/lib/storage'
 
-const primaryNavigation = [
-  { id: 'dashboard', label: 'Overview', icon: LayoutDashboard, path: '/' },
-  { id: 'leads', label: 'Leads', icon: Users, path: '/leads' },
-  { id: 'call-center', label: 'Call Center', icon: Phone, path: '/call-center', badge: 'Live' },
-  { id: 'followups', label: 'Follow Ups', icon: CalendarClock, path: '/follow-ups', badge: '2' },
-  { id: 'clients', label: 'Clients', icon: Briefcase, path: '/clients' },
+const iconMap = {
+  LayoutDashboard,
+  Users,
+  Phone,
+  CalendarClock,
+  Briefcase,
+  TrendingUp,
+  Receipt,
+  BarChart3,
+  UserCheck,
+  Settings,
+} as const
+
+const navItems = [
+  { id: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard' as const, path: '/' },
+  { id: 'leads', label: 'Leads', icon: 'Users' as const, path: '/leads' },
+  { id: 'call-center', label: 'Call Center', icon: 'Phone' as const, path: '/call-center' },
+  { id: 'followups', label: 'Follow Ups', icon: 'CalendarClock' as const, path: '/follow-ups' },
+  { id: 'clients', label: 'Clients', icon: 'Briefcase' as const, path: '/clients' },
+  { id: 'revenue', label: 'Revenue', icon: 'TrendingUp' as const, path: '/revenue' },
+  { id: 'expenses', label: 'Expenses', icon: 'Receipt' as const, path: '/expenses' },
+  { id: 'reports', label: 'Reports', icon: 'BarChart3' as const, path: '/reports' },
+  { id: 'team', label: 'Team', icon: 'UserCheck' as const, path: '/team' },
+  { id: 'settings', label: 'Settings', icon: 'Settings' as const, path: '/settings' },
 ]
 
-const insightNavigation = [
-  { id: 'revenue', label: 'Revenue', icon: TrendingUp, path: '/revenue' },
-  { id: 'expenses', label: 'Expenses', icon: Receipt, path: '/expenses' },
-  { id: 'reports', label: 'Reports', icon: BarChart3, path: '/reports' },
+const navSections = [
+  {
+    title: 'Operations',
+    itemIds: ['dashboard', 'leads', 'call-center', 'followups', 'clients'],
+  },
+  {
+    title: 'Finance',
+    itemIds: ['revenue', 'expenses', 'reports'],
+  },
+  {
+    title: 'Management',
+    itemIds: ['team', 'settings'],
+  },
 ]
 
 interface SidebarProps {
-  mobileOpen: boolean
-  onMobileClose: () => void
+  mobileOpen?: boolean
+  onMobileClose?: () => void
 }
 
-export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
+export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const { employee, signOut } = useAuth()
   const location = useLocation()
 
-  const renderNavigation = (
-    label: string,
-    items: typeof primaryNavigation,
-  ) => (
-    <div className="space-y-2">
-      {!collapsed && (
-        <p className="px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-600">{label}</p>
-      )}
-      <div className="space-y-1">
-        {items.map((item) => {
-          const Icon = item.icon
-          const isActive = item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path)
+  // Dynamic counts for notification badges
+  const [counts, setCounts] = useState({ leads: 0, calls: 0, followUps: 0 })
 
-          return (
-            <NavLink
-              key={item.id}
-              to={item.path}
-              onClick={onMobileClose}
-              title={collapsed ? item.label : undefined}
-              className={cn(
-                'group relative flex h-11 items-center gap-3 overflow-hidden rounded-[14px] px-3 text-sm font-semibold transition-all duration-200',
-                collapsed && 'lg:justify-center lg:px-0',
-                isActive
-                  ? 'bg-gradient-to-r from-red-500/16 to-red-500/[0.035] text-white shadow-[inset_0_0_0_1px_rgba(229,57,53,.16)]'
-                  : 'text-zinc-500 hover:bg-white/[0.045] hover:text-zinc-100'
-              )}
+  useEffect(() => {
+    try {
+      const activeLeads = Storage.getLeads()
+      const activeCalls = Storage.getCalls()
+      const todayStr = new Date().toISOString().split('T')[0]
+
+      const pendingLeads = activeLeads.filter((l) => l.status === 'new').length
+      const queueCalls = activeLeads.filter((l) => l.status !== 'converted').length
+      const activeFollowups = activeCalls.filter((c) => c.follow_up && c.follow_up_date === todayStr).length
+
+      setCounts({
+        leads: pendingLeads,
+        calls: queueCalls,
+        followUps: activeFollowups,
+      })
+    } catch (e) {
+      // Storage might not be loaded yet
+    }
+  }, [location.pathname])
+
+  const getBadgeValue = (id: string) => {
+    if (id === 'leads' && counts.leads > 0) return counts.leads
+    if (id === 'call-center' && counts.calls > 0) return counts.calls
+    if (id === 'followups' && counts.followUps > 0) return counts.followUps
+    return null
+  }
+
+  const renderNavList = () => (
+    <div className="space-y-6">
+      {navSections.map((sec) => (
+        <div key={sec.title} className="space-y-1.5">
+          {!collapsed && (
+            <h4 className="px-4 text-[10px] font-bold uppercase tracking-wider text-[#71717A] mb-2">
+              {sec.title}
+            </h4>
+          )}
+          <div className="space-y-0.5">
+            {sec.itemIds.map((itemId) => {
+              const item = navItems.find((n) => n.id === itemId)
+              if (!item) return null
+
+              const Icon = iconMap[item.icon]
+              const isActive =
+                item.path === '/'
+                  ? location.pathname === '/'
+                  : location.pathname.startsWith(item.path)
+              const badge = getBadgeValue(item.id)
+
+              return (
+                <NavLink
+                  key={item.id}
+                  to={item.path}
+                  onClick={onMobileClose}
+                  className={cn(
+                    'group flex items-center justify-between mx-2 px-3 py-2 rounded-xl text-caption font-medium transition-all duration-200 relative',
+                    isActive
+                      ? 'bg-white/[0.06] text-white font-semibold'
+                      : 'text-[#A1A1AA] hover:bg-white/[0.03] hover:text-white'
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      'flex items-center justify-center w-7 h-7 rounded-lg transition-colors',
+                      isActive ? 'bg-white/10 text-white' : 'text-[#71717A] group-hover:text-white group-hover:bg-white/[0.04]'
+                    )}>
+                      <Icon className="w-[18px] h-[18px]" />
+                    </div>
+                    {!collapsed && (
+                      <span className="whitespace-nowrap overflow-hidden transition-all duration-200">
+                        {item.label}
+                      </span>
+                    )}
+                  </div>
+
+                  {!collapsed && badge && (
+                    <span className="inline-flex h-5 items-center justify-center rounded-full bg-red-500/10 px-2 text-[10px] font-bold text-red-400 border border-red-500/15">
+                      {badge}
+                    </span>
+                  )}
+
+                  {/* Active selector pill */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="sidebar-nav-active"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-red-500 rounded-r-full"
+                      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    />
+                  )}
+                </NavLink>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+
+  const sidebarContent = (
+    <div className="h-full flex flex-col justify-between overflow-hidden">
+      {/* Workspace Switcher */}
+      <div className="p-4 border-b border-white/[0.06]">
+        <div className="flex items-center justify-between gap-3 bg-white/[0.02] border border-white/[0.06] rounded-xl p-2 cursor-pointer hover:bg-white/[0.04] transition-colors">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 bg-gradient-to-br from-[#e53935] to-[#c62828] text-white rounded-lg flex items-center justify-center font-bold text-xs shrink-0 shadow-md">
+              R
+            </div>
+            {!collapsed && (
+              <div className="flex-grow min-w-0">
+                <p className="text-xs font-bold text-white truncate">Redix Media</p>
+                <p className="text-[10px] text-zinc-500 font-semibold truncate leading-none mt-0.5">ERP Workspace</p>
+              </div>
+            )}
+          </div>
+          {!collapsed && <ChevronDown className="w-3.5 h-3.5 text-zinc-500" />}
+        </div>
+      </div>
+
+      {/* Navigation Links */}
+      <div className="flex-1 py-4 overflow-y-auto custom-scrollbar space-y-6">
+        {renderNavList()}
+      </div>
+
+      {/* Footer Profile */}
+      <div className="border-t border-white/[0.06] p-3 space-y-2">
+        <div className={cn(
+          'flex items-center gap-3 px-3 py-2 rounded-xl bg-white/[0.01] border border-white/[0.03]',
+          collapsed ? 'justify-center p-2' : ''
+        )}>
+          <div className="w-8 h-8 bg-gradient-to-br from-zinc-700 to-zinc-900 border border-white/[0.08] text-white rounded-xl flex items-center justify-center text-xs font-bold shrink-0">
+            {employee?.name?.charAt(0)?.toUpperCase() || 'U'}
+          </div>
+          {!collapsed && (
+            <div className="flex-1 min-w-0 overflow-hidden">
+              <p className="text-xs font-bold text-white truncate">{employee?.name || 'User'}</p>
+              <p className="text-[10px] text-[#A1A1AA] font-semibold truncate mt-0.5 capitalize leading-none">{employee?.role?.replace('_', ' ') || 'Admin'}</p>
+            </div>
+          )}
+          {!collapsed && (
+            <button
+              onClick={signOut}
+              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/[0.06] text-[#A1A1AA] hover:text-red-400 transition-colors shrink-0"
+              title="Sign Out"
             >
-              {isActive && (
-                <motion.span
-                  layoutId="redix-sidebar-active"
-                  className="absolute left-0 h-6 w-[3px] rounded-r-full bg-red-400 shadow-[0_0_14px_rgba(229,57,53,.8)]"
-                  transition={{ type: 'spring', stiffness: 360, damping: 34 }}
-                />
-              )}
-              <Icon className={cn('h-5 w-5 shrink-0 transition-colors', isActive && 'text-red-300')} />
-              <span className={cn('min-w-0 flex-1 truncate', collapsed && 'lg:hidden')}>{item.label}</span>
-              {item.badge && !collapsed && (
-                <span className={cn(
-                  'rounded-full px-2 py-0.5 text-[9px] font-bold',
-                  item.badge === 'Live' ? 'bg-red-500/12 text-red-300' : 'bg-white/[0.06] text-zinc-400'
-                )}>
-                  {item.badge}
-                </span>
-              )}
-            </NavLink>
-          )
-        })}
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Collapsible toggle desktop icon */}
+        <div className="hidden lg:flex justify-end px-2">
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="w-7 h-7 flex items-center justify-center rounded-lg border border-white/[0.06] hover:border-white/12 bg-white/[0.02] text-zinc-400 hover:text-white transition-all shadow-sm"
+          >
+            {collapsed ? <ChevronRight className="w-4.5 h-4.5" /> : <ChevronLeft className="w-4.5 h-4.5" />}
+          </button>
+        </div>
       </div>
     </div>
   )
 
   return (
     <>
+      {/* Desktop Sidebar (Floating look) */}
+      <motion.aside
+        initial={false}
+        animate={{ width: collapsed ? 76 : 240 }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        className="hidden lg:flex h-[calc(100vh-32px)] my-4 ml-4 bg-[#111111]/85 border border-white/[0.08] rounded-2xl flex-col shrink-0 z-40 relative backdrop-blur-2xl shadow-xl overflow-hidden"
+      >
+        {sidebarContent}
+      </motion.aside>
+
+      {/* Mobile Drawer Backdrop overlay */}
       <AnimatePresence>
         {mobileOpen && (
-          <motion.button
-            aria-label="Close navigation"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onMobileClose}
-            className="fixed inset-0 z-40 bg-black/75 backdrop-blur-sm lg:hidden"
-          />
+          <div className="fixed inset-0 z-50 lg:hidden flex">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={onMobileClose}
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.aside
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="relative w-[260px] h-full bg-[#111111] border-r border-white/[0.08] flex flex-col shrink-0 z-50"
+            >
+              {sidebarContent}
+            </motion.aside>
+          </div>
         )}
       </AnimatePresence>
-
-      <aside
-        className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-[280px] shrink-0 flex-col p-3 transition-[transform,width] duration-300 ease-out lg:relative lg:translate-x-0',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full',
-          collapsed ? 'lg:w-[88px]' : 'lg:w-[272px]'
-        )}
-      >
-        <div className="panel-card flex min-h-0 flex-1 flex-col overflow-hidden bg-[#0d0d0d]/94">
-          <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-white/[0.065] px-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-red-300/30 bg-gradient-to-br from-red-400 to-red-700 shadow-[0_10px_30px_rgba(229,57,53,.28)]">
-                <Zap className="h-5 w-5 fill-white text-white" />
-              </div>
-              <div className={cn('min-w-0', collapsed && 'lg:hidden')}>
-                <p className="truncate text-[17px] font-bold tracking-[-0.04em] text-white">REDIX</p>
-                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-600">Business OS</p>
-              </div>
-            </div>
-            <button
-              onClick={onMobileClose}
-              aria-label="Close navigation"
-              className="flex h-9 min-h-9 w-9 items-center justify-center rounded-xl border border-white/8 bg-white/[0.035] text-zinc-500 transition hover:bg-white/[0.07] hover:text-white lg:hidden"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="px-3 pb-2 pt-3">
-            <button
-              className={cn(
-                'flex h-12 w-full items-center gap-3 rounded-[14px] border border-white/[0.065] bg-white/[0.025] px-3 text-left transition hover:border-white/[0.11] hover:bg-white/[0.045]',
-                collapsed && 'lg:justify-center lg:px-0'
-              )}
-              title="REDIX Media workspace"
-            >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px] bg-white/[0.06] text-xs font-bold text-white">R</span>
-              <span className={cn('min-w-0 flex-1', collapsed && 'lg:hidden')}>
-                <span className="block truncate text-xs font-bold text-zinc-200">REDIX Media</span>
-                <span className="block truncate text-[10px] text-zinc-600">Main workspace</span>
-              </span>
-              {!collapsed && <ChevronDown className="h-3.5 w-3.5 text-zinc-600" />}
-            </button>
-          </div>
-
-          <nav className="sidebar-scroll flex-1 space-y-6 overflow-y-auto px-3 py-3" aria-label="Primary navigation">
-            {renderNavigation('Workspace', primaryNavigation)}
-            {renderNavigation('Finance & insights', insightNavigation)}
-          </nav>
-
-          <div className="space-y-1 border-t border-white/[0.065] px-3 py-3">
-            <NavLink
-              to="/team"
-              onClick={onMobileClose}
-              className={({ isActive }) => cn(
-                'flex h-11 items-center gap-3 rounded-[14px] px-3 text-sm font-semibold text-zinc-500 transition hover:bg-white/[0.045] hover:text-white',
-                collapsed && 'lg:justify-center lg:px-0',
-                isActive && 'bg-white/[0.055] text-white'
-              )}
-            >
-              <UserCheck className="h-5 w-5 shrink-0" />
-              <span className={cn('flex-1', collapsed && 'lg:hidden')}>Team</span>
-            </NavLink>
-            <NavLink
-              to="/settings"
-              onClick={onMobileClose}
-              className={({ isActive }) => cn(
-                'flex h-11 items-center gap-3 rounded-[14px] px-3 text-sm font-semibold text-zinc-500 transition hover:bg-white/[0.045] hover:text-white',
-                collapsed && 'lg:justify-center lg:px-0',
-                isActive && 'bg-white/[0.055] text-white'
-              )}
-            >
-              <Settings className="h-5 w-5 shrink-0" />
-              <span className={cn('flex-1', collapsed && 'lg:hidden')}>Settings</span>
-            </NavLink>
-          </div>
-
-          <div className="border-t border-white/[0.065] p-3">
-            <div className={cn('flex items-center gap-3 rounded-[16px] bg-white/[0.025] p-2', collapsed && 'lg:justify-center')}>
-              <div className="avatar h-10 w-10">{employee?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
-              <div className={cn('min-w-0 flex-1', collapsed && 'lg:hidden')}>
-                <p className="truncate text-[13px] font-bold text-white">{employee?.name || 'User'}</p>
-                <p className="truncate text-[10px] capitalize text-zinc-600">{employee?.role?.replace('_', ' ') || 'Admin'}</p>
-              </div>
-              {!collapsed && (
-                <button
-                  onClick={signOut}
-                  aria-label="Sign out"
-                  title="Sign out"
-                  className="flex h-9 w-9 items-center justify-center rounded-xl text-zinc-600 transition hover:bg-white/[0.06] hover:text-white"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={() => setCollapsed((value) => !value)}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="absolute -right-1 top-[100px] z-10 hidden h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-[#171717] text-zinc-500 shadow-xl transition hover:text-white lg:flex"
-        >
-          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </button>
-      </aside>
     </>
   )
 }

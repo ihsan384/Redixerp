@@ -10,7 +10,7 @@ const buttonVariants: Record<ButtonVariant, string> = {
   secondary: 'btn-secondary',
   ghost: 'btn-ghost',
   danger:
-    'inline-flex min-h-11 items-center justify-center gap-2 rounded-[14px] border border-red-500/30 bg-red-500/10 px-4 text-sm font-bold text-red-300 transition hover:border-red-400/50 hover:bg-red-500/15 active:scale-[.97]',
+    'inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-5 text-sm font-bold text-red-400 transition hover:border-red-500/40 hover:bg-red-500/15 active:scale-[.97]',
 }
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -45,13 +45,13 @@ interface PageHeaderProps {
 
 export function PageHeader({ eyebrow, title, description, actions, className }: PageHeaderProps) {
   return (
-    <div className={cn('page-intro', className)}>
-      <div>
+    <div className={cn('page-intro flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2', className)}>
+      <div className="space-y-1">
         {eyebrow && <span className="eyebrow">{eyebrow}</span>}
-        <h1>{title}</h1>
-        <p>{description}</p>
+        <h1 className="text-display tracking-tight text-white font-bold leading-tight">{title}</h1>
+        <p className="text-caption text-zinc-400 font-medium max-w-2xl">{description}</p>
       </div>
-      {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+      {actions && <div className="flex shrink-0 flex-wrap items-center gap-3">{actions}</div>}
     </div>
   )
 }
@@ -70,10 +70,10 @@ Panel.displayName = 'Panel'
 type MetricTone = 'brand' | 'success' | 'warning' | 'info' | 'neutral'
 
 const metricTones: Record<MetricTone, string> = {
-  brand: 'border-red-400/20 bg-red-500/10 text-red-300',
-  success: 'border-emerald-400/20 bg-emerald-500/10 text-emerald-300',
-  warning: 'border-amber-400/20 bg-amber-500/10 text-amber-300',
-  info: 'border-blue-400/20 bg-blue-500/10 text-blue-300',
+  brand: 'border-red-500/20 bg-red-500/10 text-red-400',
+  success: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400',
+  warning: 'border-amber-500/20 bg-amber-500/10 text-amber-400',
+  info: 'border-blue-500/20 bg-blue-500/10 text-blue-400',
   neutral: 'border-white/8 bg-white/[0.04] text-zinc-300',
 }
 
@@ -100,26 +100,26 @@ export function StatCard({
 }: StatCardProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 14 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(index * 0.045, 0.3), duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-      className={cn('surface-card group min-h-[168px] flex flex-col justify-between', className)}
+      transition={{ delay: Math.min(index * 0.045, 0.3), duration: 0.36, ease: [0.16, 1, 0.3, 1] }}
+      className={cn('surface-card group min-h-[160px] flex flex-col justify-between p-6', className)}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className={cn('flex h-11 w-11 items-center justify-center rounded-[14px] border', metricTones[tone])}>
+        <div className={cn('flex h-11 w-11 items-center justify-center rounded-2xl border transition-colors duration-250', metricTones[tone])}>
           {icon}
         </div>
         {trend && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/15 bg-emerald-500/8 px-2.5 py-1 text-[11px] font-bold text-emerald-300">
+          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/15 bg-emerald-500/8 px-2.5 py-1 text-[11px] font-bold text-emerald-400">
             {trend} <ArrowUpRight className="h-3 w-3" />
           </span>
         )}
       </div>
-      <div className="mt-6">
-        <div className="metric-value count-up text-[28px] leading-none">{value}</div>
-        <div className="mt-2 flex items-center justify-between gap-3">
-          <p className="text-[13px] font-semibold text-zinc-300">{label}</p>
-          {detail && <span className="text-[11px] text-zinc-600">{detail}</span>}
+      <div className="mt-5">
+        <div className="metric-value count-up text-[32px] font-bold leading-none tracking-tight text-white">{value}</div>
+        <div className="mt-2.5 flex items-center justify-between gap-3">
+          <p className="text-[13px] font-semibold text-zinc-400 group-hover:text-zinc-300 transition-colors">{label}</p>
+          {detail && <span className="text-[11px] text-zinc-600 font-medium">{detail}</span>}
         </div>
       </div>
     </motion.div>
@@ -142,10 +142,10 @@ export function Field({ label, htmlFor, hint, error, children, className }: Fiel
         <label htmlFor={htmlFor} className="text-[13px] font-semibold text-zinc-300">
           {label}
         </label>
-        {hint && <span className="text-[11px] text-zinc-600">{hint}</span>}
+        {hint && <span className="text-[11px] text-zinc-500">{hint}</span>}
       </div>
       {children}
-      {error && <p className="text-xs font-medium text-red-400">{error}</p>}
+      {error && <p className="text-xs font-semibold text-red-400">{error}</p>}
     </div>
   )
 }
@@ -160,12 +160,12 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (
-    <div className={cn('empty-state', className)}>
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/8 bg-white/[0.04] text-zinc-400">
+    <div className={cn('empty-state p-8', className)}>
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/8 bg-white/[0.03] text-zinc-400">
         {icon}
       </div>
-      <h3 className="text-base font-bold text-white">{title}</h3>
-      <p className="mt-1.5 max-w-md text-sm text-zinc-500">{description}</p>
+      <h3 className="text-base font-bold text-white tracking-tight">{title}</h3>
+      <p className="mt-1.5 max-w-sm text-xs text-zinc-500 font-medium leading-relaxed">{description}</p>
       {action && <div className="mt-5">{action}</div>}
     </div>
   )
@@ -183,10 +183,10 @@ export function SectionHeading({
   className?: string
 }) {
   return (
-    <div className={cn('section-header', className)}>
+    <div className={cn('section-header flex items-center justify-between gap-6 pb-2', className)}>
       <div>
-        <h2>{title}</h2>
-        {description && <p>{description}</p>}
+        <h2 className="text-h3 font-bold text-white tracking-tight">{title}</h2>
+        {description && <p className="text-caption text-zinc-500 font-medium mt-1">{description}</p>}
       </div>
       {action}
     </div>

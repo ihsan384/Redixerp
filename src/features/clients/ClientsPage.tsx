@@ -9,15 +9,12 @@ import {
   DollarSign,
   Award,
   TrendingUp,
-  Receipt,
   X,
-  Calendar,
 } from 'lucide-react'
 import { Storage } from '@/lib/storage'
 import { supabase } from '@/lib/supabase'
 import type { Lead, Revenue, PaymentStatus, PaymentMethod } from '@/types'
 import { formatCurrency } from '@/utils/format'
-import { format } from 'date-fns'
 import { toast } from 'sonner'
 
 const DEMO_MODE = import.meta.env.VITE_SUPABASE_URL === 'https://your-project.supabase.co' ||
@@ -67,7 +64,6 @@ function RecordRevenueModal({ isOpen, onClose, client, onSave }: RecordRevenueMo
         }
         Storage.saveRevenue([newRev, ...currentRev])
 
-        // Add Activity Log
         const newAct = {
           id: `act-${Date.now()}`,
           lead_id: client.id,
@@ -88,7 +84,7 @@ function RecordRevenueModal({ isOpen, onClose, client, onSave }: RecordRevenueMo
         await supabase.from('activities').insert(newAct as never)
       }
 
-      toast.success('Payment recorded successfully!')
+      toast.success('Payment transaction saved successfully!')
       onSave()
       onClose()
     } catch (err: unknown) {
@@ -104,48 +100,48 @@ function RecordRevenueModal({ isOpen, onClose, client, onSave }: RecordRevenueMo
         aria-label="Record client payment"
         className="modal-panel z-10 w-full max-w-md space-y-4 p-6"
       >
-        <div className="flex items-center justify-between border-b border-[#1f1f1f] pb-3">
-          <h3 className="text-sm font-semibold text-white">Record Invoice / Payment</h3>
-          <button type="button" onClick={onClose} className="p-1 rounded hover:bg-white/5 text-[#8c8c8c]">
-            <X className="w-4 h-4" />
+        <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Record Invoice / Payment</h3>
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/[0.04] text-zinc-500 hover:text-white transition-colors">
+            <X className="w-4.5 h-4.5" />
           </button>
         </div>
 
-        <div className="space-y-3.5">
-          <div className="space-y-1">
-            <label className="text-xs text-[#8c8c8c] font-medium">Client / Business</label>
-            <p className="text-xs font-semibold text-white bg-[#111111] p-2.5 rounded-lg border border-[#1f1f1f]">
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Partner Account</label>
+            <p className="text-xs font-bold text-white bg-white/[0.01] p-3 rounded-xl border border-white/[0.06]">
               {client.shop_name}
             </p>
           </div>
-          <div className="space-y-1">
-            <label className="text-xs text-[#8c8c8c] font-medium">Package / Deliverable</label>
+          <div className="space-y-1.5">
+            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Package / Deliverable</label>
             <input
               type="text"
               value={packageName}
               onChange={(e) => setPackageName(e.target.value)}
               placeholder="e.g. Starter Package Website"
-              className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-white/20"
+              className="w-full"
               required
             />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <label className="text-xs text-[#8c8c8c] font-medium">Amount (PKR)</label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Amount (PKR)</label>
               <input
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-white/20"
+                className="w-full"
                 required
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-xs text-[#8c8c8c] font-medium">Status</label>
+            <div className="space-y-1.5">
+              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Status</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as PaymentStatus)}
-                className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-2 py-2 text-xs text-white outline-none focus:border-white/20"
+                className="w-full"
               >
                 <option value="paid">Paid</option>
                 <option value="partial">Partial</option>
@@ -154,12 +150,12 @@ function RecordRevenueModal({ isOpen, onClose, client, onSave }: RecordRevenueMo
               </select>
             </div>
           </div>
-          <div className="space-y-1">
-            <label className="text-xs text-[#8c8c8c] font-medium">Payment Method</label>
+          <div className="space-y-1.5">
+            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Payment Method</label>
             <select
               value={method}
               onChange={(e) => setMethod(e.target.value as PaymentMethod)}
-              className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-2.5 py-2 text-xs text-white outline-none focus:border-white/20"
+              className="w-full"
             >
               <option value="bank_transfer">Bank Transfer</option>
               <option value="online">Online Payment Gateway</option>
@@ -168,29 +164,29 @@ function RecordRevenueModal({ isOpen, onClose, client, onSave }: RecordRevenueMo
               <option value="other">Other Method</option>
             </select>
           </div>
-          <div className="space-y-1">
-            <label className="text-xs text-[#8c8c8c] font-medium">Transaction Notes</label>
+          <div className="space-y-1.5">
+            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Transaction Notes</label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Downpayment 50%"
-              className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-white/20"
+              className="w-full"
             />
           </div>
         </div>
 
-        <div className="flex justify-end gap-2.5 pt-3 border-t border-[#1f1f1f]">
+        <div className="flex justify-end gap-3 pt-3.5 border-t border-white/[0.06] mt-5">
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-1.5 border border-[#1f1f1f] bg-[#111111] text-xs font-semibold rounded-lg text-[#8c8c8c] hover:text-white"
+            className="btn-secondary h-11 px-4 text-xs font-bold"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-3.5 py-1.5 bg-white text-black text-xs font-bold rounded-lg hover:bg-neutral-200"
+            className="btn-primary h-11 px-5 text-xs font-bold"
           >
             Save Transaction
           </button>
@@ -234,38 +230,38 @@ export function ClientsPage() {
   }
 
   return (
-    <div className="page-shell page-stack">
-      {/* KPI Stats Cards */}
+    <div className="page-shell page-stack space-y-6">
+      {/* KPI Stats Cards - Redesigned matching dark border & shadow theme */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Total Converted Clients */}
-        <div className="bg-[#0d0d0d] border border-[#1f1f1f] rounded-2xl p-5 flex items-center justify-between">
+        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-lg">
           <div>
-            <p className="text-xs font-semibold text-[#636363] uppercase tracking-wider">Total Active Clients</p>
-            <h3 className="text-2xl font-bold text-white mt-1.5">{totalClients}</h3>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Active Converted Partners</p>
+            <h3 className="text-2xl font-bold text-white tracking-tight mt-2">{totalClients} accounts</h3>
           </div>
-          <div className="w-10 h-10 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-emerald-500/10 border border-emerald-500/15 text-emerald-400 rounded-xl flex items-center justify-center">
             <Award className="w-5 h-5" />
           </div>
         </div>
 
         {/* Total Generated Value */}
-        <div className="bg-[#0d0d0d] border border-[#1f1f1f] rounded-2xl p-5 flex items-center justify-between">
+        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-lg">
           <div>
-            <p className="text-xs font-semibold text-[#636363] uppercase tracking-wider">Gross Deal Value</p>
-            <h3 className="text-2xl font-bold text-white mt-1.5">{formatCurrency(totalValueGenerated)}</h3>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Gross Value Generated</p>
+            <h3 className="text-2xl font-bold text-white tracking-tight mt-2">{formatCurrency(totalValueGenerated)}</h3>
           </div>
-          <div className="w-10 h-10 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-blue-500/10 border border-blue-500/15 text-blue-400 rounded-xl flex items-center justify-center">
             <TrendingUp className="w-5 h-5" />
           </div>
         </div>
 
         {/* Average Deal Value */}
-        <div className="bg-[#0d0d0d] border border-[#1f1f1f] rounded-2xl p-5 flex items-center justify-between">
+        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-lg">
           <div>
-            <p className="text-xs font-semibold text-[#636363] uppercase tracking-wider">Average Deal size</p>
-            <h3 className="text-2xl font-bold text-white mt-1.5">{formatCurrency(averageDealValue)}</h3>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Average Account Size</p>
+            <h3 className="text-2xl font-bold text-white tracking-tight mt-2">{formatCurrency(averageDealValue)}</h3>
           </div>
-          <div className="w-10 h-10 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-purple-500/10 border border-purple-500/15 text-purple-400 rounded-xl flex items-center justify-center">
             <DollarSign className="w-5 h-5" />
           </div>
         </div>
@@ -273,16 +269,16 @@ export function ClientsPage() {
 
       {/* Main List */}
       <div className="space-y-4">
-        <div className="flex items-center gap-2 p-3 bg-[#111111]/30 border border-[#1f1f1f] rounded-2xl">
-          <Briefcase className="w-4 h-4 text-white" />
-          <p className="text-xs font-semibold text-white">REDIX Partners & Converted Accounts</p>
+        <div className="flex items-center gap-2.5 p-3.5 bg-white/[0.01] border border-white/[0.06] rounded-2xl">
+          <Briefcase className="w-4.5 h-4.5 text-zinc-400" />
+          <p className="text-xs font-bold text-white uppercase tracking-wider">Partners ledger directory</p>
         </div>
 
         {clients.length === 0 ? (
-          <div className="text-center py-20 border border-[#1f1f1f] border-dashed rounded-3xl bg-[#111111]/10">
-            <Briefcase className="w-8 h-8 text-[#4b5563] mx-auto mb-2" />
-            <p className="text-xs font-semibold text-white">No active converted clients yet.</p>
-            <p className="text-[10px] text-[#4b5563] mt-0.5">Calls marked as 'Converted' in Call Center will show up here.</p>
+          <div className="text-center py-20 border border-dashed border-white/[0.08] rounded-3xl bg-white/[0.01]">
+            <Briefcase className="w-10 h-10 text-zinc-600 mx-auto mb-2" />
+            <p className="text-xs font-bold text-white">No active partner directories yet.</p>
+            <p className="text-[10px] text-zinc-500 mt-1 max-w-sm mx-auto leading-relaxed">Prospect lists updated to 'Converted' in Call Center are filed here.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -293,59 +289,59 @@ export function ClientsPage() {
               return (
                 <div
                   key={client.id}
-                className="surface-card flex flex-col justify-between space-y-4"
+                  className="surface-card flex flex-col justify-between space-y-4"
                 >
                   <div>
                     <div className="flex items-start justify-between">
                       <div>
-                        <h4 className="text-base font-bold text-white">{client.shop_name}</h4>
-                        <p className="text-[10px] text-[#8c8c8c] mt-0.5 font-medium">{client.category}</p>
+                        <h4 className="text-base font-bold text-white tracking-tight">{client.shop_name}</h4>
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider mt-0.5">{client.category}</p>
                       </div>
-                      <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold px-2 py-0.5 rounded-lg">
-                        Active Partner
+                      <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/15 text-emerald-400 font-bold px-2 py-0.5 rounded-lg">
+                        Active Client
                       </span>
                     </div>
 
-                    <div className="mt-3.5 bg-[#111111]/30 border border-[#1f1f1f] p-3 rounded-xl space-y-2 text-xs">
+                    <div className="mt-4 bg-white/[0.01] border border-white/[0.06] p-4 rounded-xl space-y-2.5 text-xs">
                       <div className="flex justify-between">
-                        <span className="text-[#525252]">Total Paid:</span>
+                        <span className="text-zinc-500 font-medium">Total Billed:</span>
                         <span className="text-white font-bold">{formatCurrency(clientTotal)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-[#525252]">Registered Packages:</span>
-                        <span className="text-white font-medium">
-                          {clientPayments.map((p) => p.package).join(', ') || 'No package logged'}
+                        <span className="text-zinc-500 font-medium">Packages Registered:</span>
+                        <span className="text-white font-bold truncate max-w-[200px]">
+                          {clientPayments.map((p) => p.package).join(', ') || 'No billable projects registered'}
                         </span>
                       </div>
                     </div>
                   </div>
 
                   {/* Actions footer */}
-                  <div className="flex items-center justify-between border-t border-[#1f1f1f] pt-4">
-                    <div className="flex items-center gap-1">
+                  <div className="flex items-center justify-between border-t border-white/[0.06] pt-4 mt-2">
+                    <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => handleCallRedirect(client.id)}
-                        className="p-2 rounded-lg bg-[#141414] border border-[#1f1f1f] hover:border-white/10 text-white"
-                        title="Call Client"
+                        className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/12 text-white hover:bg-white/[0.04] transition-all"
+                        title="Dial Client"
                       >
-                        <Phone className="w-3.5 h-3.5" />
+                        <Phone className="w-4 h-4 text-emerald-400" />
                       </button>
                       <button
                         onClick={() => handleWhatsApp(client.phone)}
-                        className="p-2 rounded-lg bg-[#141414] border border-[#1f1f1f] hover:border-white/10 text-white"
+                        className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/12 text-white hover:bg-white/[0.04] transition-all"
                         title="WhatsApp"
                       >
-                        <MessageSquare className="w-3.5 h-3.5" />
+                        <MessageSquare className="w-4 h-4 text-green-400" />
                       </button>
                       <button
                         onClick={() => {
                           const query = encodeURIComponent(`${client.shop_name} ${client.address || ''}`)
                           window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank')
                         }}
-                        className="p-2 rounded-lg bg-[#141414] border border-[#1f1f1f] hover:border-white/10 text-white"
-                        title="Maps"
+                        className="p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/12 text-white hover:bg-white/[0.04] transition-all"
+                        title="Google Maps Location"
                       >
-                        <MapPin className="w-3.5 h-3.5" />
+                        <MapPin className="w-4 h-4 text-blue-400" />
                       </button>
                     </div>
 
@@ -354,7 +350,7 @@ export function ClientsPage() {
                         setSelectedClient(client)
                         setIsRecordOpen(true)
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-neutral-200 text-black text-xs font-bold rounded-xl transition-all"
+                      className="btn-primary h-10 px-4 text-xs font-bold rounded-xl"
                     >
                       <Plus className="w-3.5 h-3.5" /> Log Payment
                     </button>

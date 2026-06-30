@@ -24,14 +24,13 @@ const DEMO_MODE = import.meta.env.VITE_SUPABASE_URL === 'https://your-project.su
 
 const COLORS = [
   '#ffffff',
-  '#a3a3a3',
-  '#737373',
-  '#525252',
-  '#404040',
-  '#262626',
-  '#171717',
-  '#a3e635',
-  '#38bdf8',
+  '#a1a1aa',
+  '#71717a',
+  '#e53935',
+  '#3b82f6',
+  '#22c55e',
+  '#f59e0b',
+  '#a78bfa',
 ]
 
 interface AddExpenseModalProps {
@@ -81,7 +80,7 @@ function AddExpenseModal({ isOpen, onClose, onSave }: AddExpenseModalProps) {
         if (error) throw error
       }
 
-      toast.success('Expense record created!')
+      toast.success('Expense record created successfully!')
       onSave()
       onClose()
       // reset
@@ -101,33 +100,33 @@ function AddExpenseModal({ isOpen, onClose, onSave }: AddExpenseModalProps) {
         aria-label="Record new expense"
         className="modal-panel z-10 w-full max-w-md space-y-4 p-6"
       >
-        <div className="flex items-center justify-between border-b border-[#1f1f1f] pb-3">
-          <h3 className="text-sm font-semibold text-white">Log Expense Outflow</h3>
-          <button type="button" onClick={onClose} className="p-1 rounded hover:bg-white/5 text-[#8c8c8c]">
-            <X className="w-4 h-4" />
+        <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Log Expense Outflow</h3>
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/[0.04] text-zinc-500 hover:text-white transition-colors">
+            <X className="w-4.5 h-4.5" />
           </button>
         </div>
 
-        <div className="space-y-3.5">
-          <div className="space-y-1">
-            <label className="text-xs text-[#8c8c8c] font-medium">Expense Title *</label>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Expense Item / Title *</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. AWS Cloud Server Bill"
-              className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-white/20"
+              className="w-full"
               required
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <label className="text-xs text-[#8c8c8c] font-medium">Category</label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Category</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
-                className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-2 py-2 text-xs text-white outline-none focus:border-white/20"
+                className="w-full"
               >
                 {Object.entries(EXPENSE_CATEGORY_LABELS).map(([val, label]) => (
                   <option key={val} value={val}>
@@ -136,36 +135,36 @@ function AddExpenseModal({ isOpen, onClose, onSave }: AddExpenseModalProps) {
                 ))}
               </select>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs text-[#8c8c8c] font-medium">Amount (PKR) *</label>
+            <div className="space-y-1.5">
+              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Amount (PKR) *</label>
               <input
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="5000"
-                className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-white/20"
+                className="w-full"
                 required
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <label className="text-xs text-[#8c8c8c] font-medium">Date Paid</label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Date Paid</label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-white/20"
+                className="w-full"
                 required
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-xs text-[#8c8c8c] font-medium">Payment Method</label>
+            <div className="space-y-1.5">
+              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Payment Method</label>
               <select
                 value={method}
                 onChange={(e) => setMethod(e.target.value as PaymentMethod)}
-                className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-2 py-2 text-xs text-white outline-none focus:border-white/20"
+                className="w-full"
               >
                 <option value="card">Credit/Debit Card</option>
                 <option value="bank_transfer">Bank Transfer</option>
@@ -176,29 +175,29 @@ function AddExpenseModal({ isOpen, onClose, onSave }: AddExpenseModalProps) {
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs text-[#8c8c8c] font-medium">Expense Notes</label>
+          <div className="space-y-1.5">
+            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Expense Notes</label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Domains for redix.media"
-              className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-white/20"
+              className="w-full"
             />
           </div>
         </div>
 
-        <div className="flex justify-end gap-2.5 pt-3 border-t border-[#1f1f1f]">
+        <div className="flex justify-end gap-3 pt-3.5 border-t border-white/[0.06] mt-5">
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-1.5 border border-[#1f1f1f] bg-[#111111] text-xs font-semibold rounded-lg text-[#8c8c8c] hover:text-white"
+            className="btn-secondary h-11 px-4 text-xs font-bold"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-3.5 py-1.5 bg-white text-black text-xs font-bold rounded-lg hover:bg-neutral-200"
+            className="btn-primary h-11 px-5 text-xs font-bold"
           >
             Save Outflow
           </button>
@@ -268,56 +267,80 @@ export function ExpensesPage() {
 
   const trendChartData = aggregateMonthlyExpenses()
 
+  const CustomTrendTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="rounded-xl border border-white/[0.08] bg-[#111111]/90 px-3.5 py-2.5 shadow-xl backdrop-blur-md">
+          <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-1">{label}</p>
+          <p className="text-sm font-bold text-white">PKR {payload[0].value.toLocaleString()}</p>
+        </div>
+      )
+    }
+    return null
+  }
+
+  const CustomPieTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ name: string; value: number }> }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="rounded-xl border border-white/[0.08] bg-[#111111]/90 px-3.5 py-2.5 shadow-xl backdrop-blur-md">
+          <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-1">{payload[0].name}</p>
+          <p className="text-sm font-bold text-white">PKR {payload[0].value.toLocaleString()}</p>
+        </div>
+      )
+    }
+    return null
+  }
+
   return (
-    <div className="page-shell page-stack">
+    <div className="page-shell page-stack space-y-6">
       {/* Header Row */}
       <div className="panel-card flex flex-col items-start justify-between gap-4 p-5 sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
-          <Receipt className="w-5 h-5 text-white" />
+          <Receipt className="w-5 h-5 text-red-400" />
           <div>
-            <p className="text-sm font-semibold text-white">Expense Outlays</p>
-            <p className="text-xs text-[#525252] mt-0.5">Manage domains, servers, salaries, advertisements, and running office costs.</p>
+            <p className="text-sm font-bold text-white">Expense Outlays</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Manage hosting plans, SaaS software licensing, running office costs, and operations salaries.</p>
           </div>
         </div>
         <button
           onClick={() => setIsAddOpen(true)}
-          className="btn-primary px-4 text-xs"
+          className="btn-primary h-11 px-4 text-xs font-bold"
         >
-          <Plus className="w-3.5 h-3.5" /> Log Expense
+          <Plus className="w-4 h-4" /> Log Expense
         </button>
       </div>
 
       {/* KPIs Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Monthly Expense */}
-        <div className="bg-[#0d0d0d] border border-[#1f1f1f] rounded-2xl p-5 flex items-center justify-between">
+        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-lg">
           <div>
-            <p className="text-xs font-semibold text-[#636363] uppercase tracking-wider">This Month's Spending</p>
-            <h3 className="text-2xl font-bold text-white mt-1.5">{formatCurrency(monthlyTotal)}</h3>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">This Month's Spend</p>
+            <h3 className="text-2xl font-bold text-white tracking-tight mt-2">{formatCurrency(monthlyTotal)}</h3>
           </div>
-          <div className="w-10 h-10 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-red-500/10 border border-red-500/15 text-red-400 rounded-xl flex items-center justify-center">
             <TrendingDown className="w-5 h-5" />
           </div>
         </div>
 
         {/* Yearly Expense */}
-        <div className="bg-[#0d0d0d] border border-[#1f1f1f] rounded-2xl p-5 flex items-center justify-between">
+        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-lg">
           <div>
-            <p className="text-xs font-semibold text-[#636363] uppercase tracking-wider">Year-to-Date Spend</p>
-            <h3 className="text-2xl font-bold text-white mt-1.5">{formatCurrency(yearlyTotal)}</h3>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Year-to-Date Outflow</p>
+            <h3 className="text-2xl font-bold text-white tracking-tight mt-2">{formatCurrency(yearlyTotal)}</h3>
           </div>
-          <div className="w-10 h-10 bg-neutral-800 border border-neutral-700 text-white rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-neutral-800 border border-white/[0.08] text-white rounded-xl flex items-center justify-center">
             <DollarSign className="w-5 h-5" />
           </div>
         </div>
 
         {/* All-time Spent */}
-        <div className="bg-[#0d0d0d] border border-[#1f1f1f] rounded-2xl p-5 flex items-center justify-between">
+        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-lg">
           <div>
-            <p className="text-xs font-semibold text-[#636363] uppercase tracking-wider">Gross Outflow Logged</p>
-            <h3 className="text-2xl font-bold text-white mt-1.5">{formatCurrency(totalAllTime)}</h3>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Gross Outflow Logged</p>
+            <h3 className="text-2xl font-bold text-white tracking-tight mt-2">{formatCurrency(totalAllTime)}</h3>
           </div>
-          <div className="w-10 h-10 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-yellow-500/10 border border-yellow-500/15 text-yellow-400 rounded-xl flex items-center justify-center">
             <ArrowUpRight className="w-5 h-5" />
           </div>
         </div>
@@ -327,9 +350,9 @@ export function ExpensesPage() {
       {expenses.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Pie Chart of category breakdown */}
-          <div className="lg:col-span-1 border border-[#1f1f1f] bg-[#0d0d0d] rounded-2xl p-5 flex flex-col justify-between">
+          <div className="lg:col-span-1 border border-white/[0.08] bg-[#111111]/60 backdrop-blur-md rounded-2xl p-5 flex flex-col justify-between shadow-md">
             <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-1.5">
-              <PieIcon className="w-4 h-4 text-[#8c8c8c]" /> Spend Breakdown
+              <PieIcon className="w-4 h-4 text-zinc-500" /> Spend Breakdown
             </h4>
 
             <div className="h-52 relative flex items-center justify-center">
@@ -348,21 +371,13 @@ export function ExpensesPage() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      background: '#111111',
-                      border: '1px solid #1f1f1f',
-                      borderRadius: '12px',
-                      color: '#fff',
-                    }}
-                    itemStyle={{ fontSize: '11px', color: '#fff' }}
-                  />
+                  <Tooltip content={<CustomPieTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
 
             {/* Legends list */}
-            <div className="mt-4 grid grid-cols-2 gap-2 text-[10px] text-[#8c8c8c] font-medium border-t border-[#1f1f1f] pt-3.5">
+            <div className="mt-4 grid grid-cols-2 gap-2 text-[10px] text-zinc-400 font-bold border-t border-white/[0.06] pt-3.5">
               {categoryChartData.map((d, idx) => (
                 <div key={d.name} className="flex items-center gap-1.5 truncate">
                   <span
@@ -376,25 +391,17 @@ export function ExpensesPage() {
           </div>
 
           {/* Bar Chart of Monthly trends */}
-          <div className="lg:col-span-2 border border-[#1f1f1f] bg-[#0d0d0d] rounded-2xl p-5">
+          <div className="lg:col-span-2 border border-white/[0.08] bg-[#111111]/60 backdrop-blur-md rounded-2xl p-5 shadow-md">
             <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-5 flex items-center gap-1.5">
-              <TrendingDown className="w-4 h-4 text-[#8c8c8c]" /> Month-on-Month Expenditures
+              <TrendingDown className="w-4 h-4 text-zinc-500" /> Month-on-Month Expenditures
             </h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={trendChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid stroke="#1f1f1f" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" stroke="#525252" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#525252" fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      background: '#111111',
-                      border: '1px solid #1f1f1f',
-                      borderRadius: '12px',
-                    }}
-                    labelStyle={{ color: '#fff', fontSize: '11px', fontWeight: 'bold' }}
-                    itemStyle={{ color: '#8c8c8c', fontSize: '12px' }}
-                  />
+                  <CartesianGrid stroke="rgba(255, 255, 255, 0.03)" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" stroke="#71717A" fontSize={11} tickLine={false} axisLine={false} tick={{ fontWeight: 500 }} />
+                  <YAxis stroke="#71717A" fontSize={11} tickLine={false} axisLine={false} tick={{ fontWeight: 500 }} />
+                  <Tooltip content={<CustomTrendTooltip />} />
                   <Bar dataKey="amount" fill="#ffffff" radius={[4, 4, 0, 0]} barSize={28} />
                 </BarChart>
               </ResponsiveContainer>
@@ -405,42 +412,42 @@ export function ExpensesPage() {
 
       {/* Ledger Table List */}
       <div className="table-shell">
-        <div className="px-5 py-4 border-b border-[#1f1f1f] flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-white/[0.06] bg-white/[0.02]">
           <h4 className="text-xs font-bold text-white uppercase tracking-wider">Outlay Billing Journals</h4>
         </div>
 
         <div className="overflow-x-auto">
           {expenses.length === 0 ? (
-            <div className="p-8 text-center text-xs text-[#525252] italic animate-pulse">
+            <div className="p-8 text-center text-xs text-zinc-600 font-bold italic animate-pulse">
               No expenditures recorded. Click Log Expense to register payments.
             </div>
           ) : (
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-[#1f1f1f] bg-[#111111]/30">
-                  <th className="py-3 px-4 text-xs font-semibold text-[#8c8c8c] tracking-wider">Expense Item</th>
-                  <th className="py-3 px-4 text-xs font-semibold text-[#8c8c8c] tracking-wider">Category</th>
-                  <th className="py-3 px-4 text-xs font-semibold text-[#8c8c8c] tracking-wider">Amount</th>
-                  <th className="py-3 px-4 text-xs font-semibold text-[#8c8c8c] tracking-wider">Date Paid</th>
-                  <th className="py-3 px-4 text-xs font-semibold text-[#8c8c8c] tracking-wider">Method</th>
-                  <th className="py-3 px-4 text-xs font-semibold text-[#8c8c8c] tracking-wider">Notes</th>
+                <tr className="border-b border-white/[0.06] bg-[#111111]/40">
+                  <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Expense Item</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Category</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Amount</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Date Paid</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Method</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Notes</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1f1f1f]">
+              <tbody className="divide-y divide-white/[0.04]">
                 {expenses.map((exp) => (
                   <tr key={exp.id} className="hover:bg-white/[0.01] transition-colors">
-                    <td className="py-3 px-4 text-xs font-semibold text-white">{exp.title}</td>
-                    <td className="py-3 px-4 text-xs text-[#8c8c8c]">
+                    <td className="py-3 px-4 text-xs font-bold text-white">{exp.title}</td>
+                    <td className="py-3 px-4 text-xs text-zinc-400 font-medium">
                       {EXPENSE_CATEGORY_LABELS[exp.category]}
                     </td>
                     <td className="py-3 px-4 text-xs font-bold text-white">
                       {formatCurrency(exp.amount)}
                     </td>
-                    <td className="py-3 px-4 text-xs text-[#8c8c8c]">{exp.date}</td>
-                    <td className="py-3 px-4 text-xs text-[#8c8c8c] capitalize">
+                    <td className="py-3 px-4 text-xs text-zinc-400 font-medium">{exp.date}</td>
+                    <td className="py-3 px-4 text-xs text-zinc-400 capitalize font-medium">
                       {exp.payment_method}
                     </td>
-                    <td className="py-3 px-4 text-xs text-[#525252] truncate max-w-xs">
+                    <td className="py-3 px-4 text-xs text-zinc-500 truncate max-w-xs font-medium">
                       {exp.notes || '--'}
                     </td>
                   </tr>

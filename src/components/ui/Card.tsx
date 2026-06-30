@@ -8,7 +8,7 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'surface-card overflow-hidden',
+      'surface-card overflow-hidden transition-all duration-300 hover:translate-y-[-2px] hover:border-white/12 border border-white/8 bg-gradient-to-br from-[#171717]/80 to-[#111111]/90 rounded-[20px] p-6 shadow-lg backdrop-blur-md',
       className
     )}
     {...props}
@@ -22,7 +22,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn('mb-5 flex flex-col space-y-1.5', className)}
+    className={cn('mb-4 flex flex-col space-y-1.5', className)}
     {...props}
   />
 ))
@@ -34,7 +34,7 @@ const CardTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <h3
     ref={ref}
-    className={cn('text-lg font-bold leading-none tracking-[-0.025em] text-white', className)}
+    className={cn('text-h4 font-bold leading-none tracking-tight text-white', className)}
     {...props}
   />
 ))
@@ -44,7 +44,7 @@ const CardDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, ...props }, ref) => (
-  <p ref={ref} className={cn('text-[13px] text-zinc-500', className)} {...props} />
+  <p ref={ref} className={cn('text-caption text-zinc-500 font-medium', className)} {...props} />
 ))
 CardDescription.displayName = 'CardDescription'
 
@@ -62,10 +62,11 @@ const CardFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn('flex items-center border-t border-white/8 pt-4', className)}
+    className={cn('flex items-center border-t border-white/8 pt-4 mt-4', className)}
     {...props}
   />
 ))
 CardFooter.displayName = 'CardFooter'
 
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
+export default Card

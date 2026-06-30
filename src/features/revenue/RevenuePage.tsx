@@ -2,12 +2,9 @@ import { useState, useEffect } from 'react'
 import {
   TrendingUp,
   DollarSign,
-  Calendar,
-  CreditCard,
   Plus,
   ArrowDownLeft,
   ArrowUpRight,
-  Filter,
   X,
 } from 'lucide-react'
 import {
@@ -18,8 +15,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
 } from 'recharts'
 import { Storage } from '@/lib/storage'
 import { supabase } from '@/lib/supabase'
@@ -86,7 +81,7 @@ function AddRevenueModal({ isOpen, onClose, leads, onSave }: AddRevenueModalProp
         if (error) throw error
       }
 
-      toast.success('Revenue record created!')
+      toast.success('Revenue record created successfully!')
       onSave()
       onClose()
     } catch (err: unknown) {
@@ -99,23 +94,22 @@ function AddRevenueModal({ isOpen, onClose, leads, onSave }: AddRevenueModalProp
       <div onClick={onClose} className="modal-backdrop" />
       <form
         onSubmit={handleSubmit}
-        aria-label="Record new revenue"
         className="modal-panel z-10 w-full max-w-md space-y-4 p-6"
       >
-        <div className="flex items-center justify-between border-b border-[#1f1f1f] pb-3">
-          <h3 className="text-sm font-semibold text-white">Record New Revenue</h3>
-          <button type="button" onClick={onClose} className="p-1 rounded hover:bg-white/5 text-[#8c8c8c]">
-            <X className="w-4 h-4" />
+        <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Record New Revenue Inflow</h3>
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/[0.04] text-zinc-500 hover:text-white transition-colors">
+            <X className="w-4.5 h-4.5" />
           </button>
         </div>
 
-        <div className="space-y-3.5">
-          <div className="space-y-1">
-            <label className="text-xs text-[#8c8c8c] font-medium">Select Client *</label>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Select Converted Client *</label>
             <select
               value={leadId}
               onChange={(e) => setLeadId(e.target.value)}
-              className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-2.5 py-2 text-xs text-white outline-none focus:border-white/20"
+              className="w-full"
               required
             >
               {leads.map((l) => (
@@ -126,49 +120,49 @@ function AddRevenueModal({ isOpen, onClose, leads, onSave }: AddRevenueModalProp
             </select>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs text-[#8c8c8c] font-medium">Package / Deliverable *</label>
+          <div className="space-y-1.5">
+            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Package / Deliverable *</label>
             <input
               type="text"
               value={packageName}
               onChange={(e) => setPackageName(e.target.value)}
               placeholder="e.g. Custom Web Platform"
-              className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-white/20"
+              className="w-full"
               required
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <label className="text-xs text-[#8c8c8c] font-medium">Amount (PKR) *</label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Amount (PKR) *</label>
               <input
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="25000"
-                className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-white/20"
+                className="w-full"
                 required
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-xs text-[#8c8c8c] font-medium">Date Received</label>
+            <div className="space-y-1.5">
+              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Date Received</label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-white/20"
+                className="w-full"
                 required
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <label className="text-xs text-[#8c8c8c] font-medium">Status</label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Payment Status</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as PaymentStatus)}
-                className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-2 py-2 text-xs text-white outline-none focus:border-white/20"
+                className="w-full"
               >
                 <option value="paid">Paid</option>
                 <option value="partial">Partial</option>
@@ -176,12 +170,12 @@ function AddRevenueModal({ isOpen, onClose, leads, onSave }: AddRevenueModalProp
                 <option value="overdue">Overdue</option>
               </select>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs text-[#8c8c8c] font-medium">Method</label>
+            <div className="space-y-1.5">
+              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Payment Method</label>
               <select
                 value={method}
                 onChange={(e) => setMethod(e.target.value as PaymentMethod)}
-                className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-2 py-2 text-xs text-white outline-none focus:border-white/20"
+                className="w-full"
               >
                 <option value="bank_transfer">Bank Transfer</option>
                 <option value="online">Online Gateway</option>
@@ -192,29 +186,29 @@ function AddRevenueModal({ isOpen, onClose, leads, onSave }: AddRevenueModalProp
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs text-[#8c8c8c] font-medium">Notes</label>
+          <div className="space-y-1.5">
+            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Transaction Notes</label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add optional notes..."
-              className="w-full bg-[#141414] border border-[#1f1f1f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-white/20"
+              placeholder="Add payment context notes..."
+              className="w-full"
             />
           </div>
         </div>
 
-        <div className="flex justify-end gap-2.5 pt-3 border-t border-[#1f1f1f]">
+        <div className="flex justify-end gap-3 pt-3.5 border-t border-white/[0.06] mt-5">
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-1.5 border border-[#1f1f1f] bg-[#111111] text-xs font-semibold rounded-lg text-[#8c8c8c] hover:text-white"
+            className="btn-secondary h-11 px-4 text-xs font-bold"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-3.5 py-1.5 bg-white text-black text-xs font-bold rounded-lg hover:bg-neutral-200"
+            className="btn-primary h-11 px-5 text-xs font-bold"
           >
             Save Record
           </button>
@@ -235,7 +229,6 @@ export function RevenuePage() {
       lead: Storage.getLeads().find((l) => l.id === r.lead_id),
     }))
     setRevenues(revs)
-    // Only allow recording revenue against converted leads (clients) or all leads
     setLeads(Storage.getLeads())
   }
 
@@ -257,7 +250,6 @@ export function RevenuePage() {
     const monthlyData: Record<string, number> = {}
     revenues.forEach((r) => {
       if (r.received_date) {
-        // receivedDate format is YYYY-MM-DD
         const [year, month] = r.received_date.split('-')
         if (month) {
           const dateObj = new Date(parseInt(year), parseInt(month) - 1, 1)
@@ -275,56 +267,68 @@ export function RevenuePage() {
 
   const chartData = aggregateMonthlySales()
 
+  const CustomChartTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="rounded-xl border border-white/[0.08] bg-[#111111]/90 px-3.5 py-2.5 shadow-xl backdrop-blur-md">
+          <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-1">{label}</p>
+          <p className="text-sm font-bold text-white">PKR {payload[0].value.toLocaleString()}</p>
+        </div>
+      )
+    }
+    return null
+  }
+
   return (
-    <div className="page-shell page-stack">
+    <div className="page-shell page-stack space-y-6">
       {/* Header Row */}
-      <div className="panel-card flex flex-col items-start justify-between gap-4 p-5 sm:flex-row sm:items-center">
+      <div className="panel-card flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
-          <TrendingUp className="w-5 h-5 text-white" />
+          <TrendingUp className="w-5 h-5 text-red-400" />
           <div>
-            <p className="text-sm font-semibold text-white">Revenue Operations Ledger</p>
-            <p className="text-xs text-[#525252] mt-0.5">Manage customer billing accounts, payments received, and invoice statuses.</p>
+            <p className="text-sm font-bold text-white">Revenue Operations Ledger</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Manage customer billing accounts, payments received, and active invoices.</p>
           </div>
         </div>
         <button
           onClick={() => setIsAddOpen(true)}
-          className="btn-primary px-4 text-xs"
+          className="btn-primary h-11 px-4 text-xs font-bold"
         >
-          <Plus className="w-3.5 h-3.5" /> Log Revenue
+          <Plus className="w-4 h-4" /> Log Revenue
         </button>
       </div>
 
-      {/* KPI Stats */}
+      {/* KPI Stats - Redesigned to support premium borders & fonts */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Gross Revenue */}
-        <div className="bg-[#0d0d0d] border border-[#1f1f1f] rounded-2xl p-5 flex items-center justify-between">
+        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-lg">
           <div>
-            <p className="text-xs font-semibold text-[#636363] uppercase tracking-wider">Gross Billings</p>
-            <h3 className="text-2xl font-bold text-white mt-1.5">{formatCurrency(grossInflow)}</h3>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Gross Billings Inflow</p>
+            <h3 className="text-2xl font-bold text-white tracking-tight mt-2">{formatCurrency(grossInflow)}</h3>
           </div>
-          <div className="w-10 h-10 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-emerald-500/10 border border-emerald-500/15 text-emerald-400 rounded-xl flex items-center justify-center shadow-inner">
             <ArrowDownLeft className="w-5 h-5" />
           </div>
         </div>
 
         {/* Total Collected */}
-        <div className="bg-[#0d0d0d] border border-[#1f1f1f] rounded-2xl p-5 flex items-center justify-between">
+        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-lg">
           <div>
-            <p className="text-xs font-semibold text-[#636363] uppercase tracking-wider">Total Collected</p>
-            <h3 className="text-2xl font-bold text-white mt-1.5">{formatCurrency(paidInflow)}</h3>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Total Inflow Collected</p>
+            <h3 className="text-2xl font-bold text-white tracking-tight mt-2">{formatCurrency(paidInflow)}</h3>
           </div>
-          <div className="w-10 h-10 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-blue-500/10 border border-blue-500/15 text-blue-400 rounded-xl flex items-center justify-center shadow-inner">
             <DollarSign className="w-5 h-5" />
           </div>
         </div>
 
         {/* Receivables Pending */}
-        <div className="bg-[#0d0d0d] border border-[#1f1f1f] rounded-2xl p-5 flex items-center justify-between">
+        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-lg">
           <div>
-            <p className="text-xs font-semibold text-[#636363] uppercase tracking-wider">Accounts Receivable</p>
-            <h3 className="text-2xl font-bold text-white mt-1.5">{formatCurrency(pendingInflow)}</h3>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Accounts Receivable</p>
+            <h3 className="text-2xl font-bold text-white tracking-tight mt-2">{formatCurrency(pendingInflow)}</h3>
           </div>
-          <div className="w-10 h-10 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-yellow-500/10 border border-yellow-500/15 text-yellow-400 rounded-xl flex items-center justify-center shadow-inner">
             <ArrowUpRight className="w-5 h-5" />
           </div>
         </div>
@@ -332,9 +336,9 @@ export function RevenuePage() {
 
       {/* Chart Row */}
       {chartData.length > 0 && (
-        <div className="border border-[#1f1f1f] bg-[#0d0d0d] rounded-2xl p-6">
+        <div className="border border-white/[0.08] bg-[#111111]/60 backdrop-blur-md rounded-2xl p-6 shadow-md">
           <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-5 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-[#8c8c8c]" /> Billing Collections Growth (Monthly)
+            <TrendingUp className="w-4 h-4 text-zinc-500" /> Inflows growth trends
           </h4>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -345,19 +349,11 @@ export function RevenuePage() {
                     <stop offset="95%" stopColor="#ffffff" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid stroke="#1f1f1f" vertical={false} strokeDasharray="3 3" />
-                <XAxis dataKey="name" stroke="#525252" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="#525252" fontSize={11} tickLine={false} axisLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    background: '#111111',
-                    border: '1px solid #1f1f1f',
-                    borderRadius: '12px',
-                  }}
-                  labelStyle={{ color: '#fff', fontSize: '11px', fontWeight: 'bold' }}
-                  itemStyle={{ color: '#8c8c8c', fontSize: '12px' }}
-                />
-                <Area type="monotone" dataKey="amount" stroke="#ffffff" strokeWidth={1.5} fillOpacity={1} fill="url(#colorSales)" />
+                <CartesianGrid stroke="rgba(255, 255, 255, 0.03)" vertical={false} strokeDasharray="3 3" />
+                <XAxis dataKey="name" stroke="#71717A" fontSize={11} tickLine={false} axisLine={false} tick={{ fontWeight: 500 }} />
+                <YAxis stroke="#71717A" fontSize={11} tickLine={false} axisLine={false} tick={{ fontWeight: 500 }} />
+                <Tooltip content={<CustomChartTooltip />} />
+                <Area type="monotone" dataKey="amount" stroke="#ffffff" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -366,50 +362,50 @@ export function RevenuePage() {
 
       {/* Structured Ledger Table */}
       <div className="table-shell">
-        <div className="px-5 py-4 border-b border-[#1f1f1f] flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-white/[0.06] bg-white/[0.02]">
           <h4 className="text-xs font-bold text-white uppercase tracking-wider">Revenue Transaction Logs</h4>
         </div>
 
         <div className="overflow-x-auto">
           {revenues.length === 0 ? (
-            <div className="p-8 text-center text-xs text-[#525252] italic">
-              No revenue transactions recorded. Click Log Revenue to add.
+            <div className="p-8 text-center text-xs text-zinc-600 font-bold italic animate-pulse">
+              No revenue transactions recorded. Click Log Revenue to add entries.
             </div>
           ) : (
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-[#1f1f1f] bg-[#111111]/30">
-                  <th className="py-3 px-4 text-xs font-semibold text-[#8c8c8c] tracking-wider">Client Account</th>
-                  <th className="py-3 px-4 text-xs font-semibold text-[#8c8c8c] tracking-wider">Package</th>
-                  <th className="py-3 px-4 text-xs font-semibold text-[#8c8c8c] tracking-wider">Amount</th>
-                  <th className="py-3 px-4 text-xs font-semibold text-[#8c8c8c] tracking-wider">Date Received</th>
-                  <th className="py-3 px-4 text-xs font-semibold text-[#8c8c8c] tracking-wider">Status</th>
-                  <th className="py-3 px-4 text-xs font-semibold text-[#8c8c8c] tracking-wider">Method</th>
+                <tr className="border-b border-white/[0.06] bg-[#111111]/40">
+                  <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Client Account</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Package / Deliverable</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Amount</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Date Received</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Status</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Method</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1f1f1f]">
+              <tbody className="divide-y divide-white/[0.04]">
                 {revenues.map((rev) => (
                   <tr key={rev.id} className="hover:bg-white/[0.01] transition-colors">
-                    <td className="py-3 px-4 text-xs font-medium text-white">
+                    <td className="py-3 px-4 text-xs font-bold text-white">
                       {rev.lead?.shop_name || 'Generic Client'}
                     </td>
-                    <td className="py-3 px-4 text-xs text-[#8c8c8c]">{rev.package}</td>
-                    <td className="py-3 px-4 text-xs font-semibold text-white">
+                    <td className="py-3 px-4 text-xs text-zinc-400 font-medium">{rev.package}</td>
+                    <td className="py-3 px-4 text-xs font-bold text-white">
                       {formatCurrency(rev.amount)}
                     </td>
-                    <td className="py-3 px-4 text-xs text-[#8c8c8c]">{rev.received_date}</td>
+                    <td className="py-3 px-4 text-xs text-zinc-400 font-medium">{rev.received_date}</td>
                     <td className="py-3 px-4 text-xs">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-lg border text-[10px] font-semibold ${
-                          rev.payment_status === 'paid' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                          rev.payment_status === 'partial' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                          'bg-red-500/10 text-red-400 border-red-500/20'
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-lg border text-[10px] font-bold ${
+                          rev.payment_status === 'paid' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/15' :
+                          rev.payment_status === 'partial' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/15' :
+                          'bg-red-500/10 text-red-400 border-red-500/15'
                         }`}
                       >
                         {rev.payment_status.toUpperCase()}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-xs text-[#8c8c8c] capitalize">
+                    <td className="py-3 px-4 text-xs text-zinc-400 capitalize font-medium">
                       {rev.payment_method.replace('_', ' ')}
                     </td>
                   </tr>
