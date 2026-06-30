@@ -98,29 +98,45 @@ alter table public.expenses enable row level security;
 -- ROW LEVEL SECURITY (RLS) POLICIES
 
 -- Employees Policies
+drop policy if exists "Allow public read access to employees" on public.employees;
 create policy "Allow public read access to employees" on public.employees for select using (true);
+drop policy if exists "Allow public insert access to employees" on public.employees;
 create policy "Allow public insert access to employees" on public.employees for insert with check (true);
+drop policy if exists "Allow public update access to employees" on public.employees;
 create policy "Allow public update access to employees" on public.employees for update using (true);
 
 -- Leads Policies
+drop policy if exists "Allow public read access to leads" on public.leads;
 create policy "Allow public read access to leads" on public.leads for select using (true);
+drop policy if exists "Allow public insert access to leads" on public.leads;
 create policy "Allow public insert access to leads" on public.leads for insert with check (true);
+drop policy if exists "Allow public update access to leads" on public.leads;
 create policy "Allow public update access to leads" on public.leads for update using (true);
+drop policy if exists "Allow public delete access to leads" on public.leads;
 create policy "Allow public delete access to leads" on public.leads for delete using (true);
 
 -- Calls Policies
+drop policy if exists "Allow public read access to calls" on public.calls;
 create policy "Allow public read access to calls" on public.calls for select using (true);
+drop policy if exists "Allow public insert access to calls" on public.calls;
 create policy "Allow public insert access to calls" on public.calls for insert with check (true);
+drop policy if exists "Allow public update access to calls" on public.calls;
 create policy "Allow public update access to calls" on public.calls for update using (true);
 
 -- Activities Policies
+drop policy if exists "Allow public read access to activities" on public.activities;
 create policy "Allow public read access to activities" on public.activities for select using (true);
+drop policy if exists "Allow public insert access to activities" on public.activities;
 create policy "Allow public insert access to activities" on public.activities for insert with check (true);
 
 -- Revenue Policies
+drop policy if exists "Allow public read access to revenue" on public.revenue;
 create policy "Allow public read access to revenue" on public.revenue for select using (true);
+drop policy if exists "Allow public insert access to revenue" on public.revenue;
 create policy "Allow public insert access to revenue" on public.revenue for insert with check (true);
 
 -- Expenses Policies
+drop policy if exists "Allow public read access to expenses" on public.expenses;
 create policy "Allow public read access to expenses" on public.expenses for select using (true);
+drop policy if exists "Allow public insert access to expenses" on public.expenses;
 create policy "Allow public insert access to expenses" on public.expenses for insert with check (true);
