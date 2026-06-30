@@ -41,6 +41,12 @@ create table if not exists public.calls (
     follow_up_date text,
     follow_up_time text,
     follow_up_reminder text,
+    direction text default 'outgoing',
+    priority text default 'medium',
+    status text default 'completed',
+    recording_url text,
+    voice_note_url text,
+    tags text[],
     created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

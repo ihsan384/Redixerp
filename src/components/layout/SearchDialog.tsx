@@ -68,6 +68,7 @@ export function SearchDialog({ isOpen, onClose }: SearchDialogProps) {
     { id: 'nav-dashboard', label: 'Go to Dashboard', path: '/', category: 'Navigation', icon: ArrowRight },
     { id: 'nav-leads', label: 'Go to Leads Page', path: '/leads', category: 'Navigation', icon: ArrowRight },
     { id: 'nav-call-center', label: 'Go to Call Center', path: '/call-center', category: 'Navigation', icon: ArrowRight },
+    { id: 'nav-call-history', label: 'Go to Call History', path: '/call-history', category: 'Navigation', icon: ArrowRight },
     { id: 'nav-follow-ups', label: 'Go to Follow Ups', path: '/follow-ups', category: 'Navigation', icon: ArrowRight },
     { id: 'nav-revenue', label: 'Go to Revenue Page', path: '/revenue', category: 'Navigation', icon: ArrowRight },
     { id: 'nav-expenses', label: 'Go to Expenses Page', path: '/expenses', category: 'Navigation', icon: ArrowRight },

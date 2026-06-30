@@ -17,6 +17,7 @@ import {
   Zap,
   LogOut,
   ChevronDown,
+  History,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { cn } from '@/utils/cn'
@@ -33,12 +34,14 @@ const iconMap = {
   BarChart3,
   UserCheck,
   Settings,
+  History,
 } as const
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard' as const, path: '/' },
   { id: 'leads', label: 'Leads', icon: 'Users' as const, path: '/leads' },
   { id: 'call-center', label: 'Call Center', icon: 'Phone' as const, path: '/call-center' },
+  { id: 'call-history', label: 'Call History', icon: 'History' as const, path: '/call-history' },
   { id: 'followups', label: 'Follow Ups', icon: 'CalendarClock' as const, path: '/follow-ups' },
   { id: 'clients', label: 'Clients', icon: 'Briefcase' as const, path: '/clients' },
   { id: 'revenue', label: 'Revenue', icon: 'TrendingUp' as const, path: '/revenue' },
@@ -51,7 +54,7 @@ const navItems = [
 const navSections = [
   {
     title: 'Operations',
-    itemIds: ['dashboard', 'leads', 'call-center', 'followups', 'clients'],
+    itemIds: ['dashboard', 'leads', 'call-center', 'call-history', 'followups', 'clients'],
   },
   {
     title: 'Finance',

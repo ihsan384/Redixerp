@@ -18,16 +18,21 @@ export type LeadStatus =
   | 'lost'
 
 export type CallOutcome =
-  | 'no_answer'
+  | 'connected'
   | 'busy'
+  | 'no_answer'
+  | 'rejected'
+  | 'switched_off'
   | 'interested'
-  | 'not_interested'
-  | 'already_has_website'
-  | 'call_later'
-  | 'wrong_number'
-  | 'owner_not_available'
+  | 'very_interested'
   | 'meeting_scheduled'
+  | 'demo_booked'
+  | 'proposal_sent'
+  | 'follow_up_later'
   | 'converted'
+  | 'wrong_number'
+  | 'spam'
+  | 'not_interested'
 
 export type EmployeeRole = 'admin' | 'sales_manager' | 'designer' | 'developer' | 'sales_rep'
 
@@ -98,6 +103,12 @@ export interface Call {
   follow_up_date?: string
   follow_up_time?: string
   follow_up_reminder?: string
+  direction?: 'incoming' | 'outgoing'
+  priority?: 'low' | 'medium' | 'high'
+  status?: 'completed' | 'missed' | 'voicemail'
+  recording_url?: string
+  voice_note_url?: string
+  tags?: string[]
   created_at: string
 }
 

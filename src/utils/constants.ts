@@ -33,16 +33,21 @@ export const LEAD_STATUS_COLORS: Record<LeadStatus, string> = {
 }
 
 export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
-  no_answer: 'No Answer',
+  connected: 'Connected',
   busy: 'Busy',
+  no_answer: 'No Answer',
+  rejected: 'Rejected',
+  switched_off: 'Switched Off',
   interested: 'Interested',
-  not_interested: 'Not Interested',
-  already_has_website: 'Already Has Website',
-  call_later: 'Call Later',
-  wrong_number: 'Wrong Number',
-  owner_not_available: 'Owner Not Available',
+  very_interested: 'Very Interested',
   meeting_scheduled: 'Meeting Scheduled',
+  demo_booked: 'Demo Booked',
+  proposal_sent: 'Proposal Sent',
+  follow_up_later: 'Follow Up Later',
   converted: 'Converted',
+  wrong_number: 'Wrong Number',
+  spam: 'Spam',
+  not_interested: 'Not Interested',
 }
 
 export const EMPLOYEE_ROLE_LABELS: Record<EmployeeRole, string> = {
@@ -90,6 +95,7 @@ export const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard', path: '/' },
   { id: 'leads', label: 'Leads', icon: 'Users', path: '/leads' },
   { id: 'call-center', label: 'Call Center', icon: 'Phone', path: '/call-center' },
+  { id: 'call-history', label: 'Call History', icon: 'History', path: '/call-history' },
   { id: 'followups', label: 'Follow Ups', icon: 'CalendarClock', path: '/follow-ups' },
   { id: 'clients', label: 'Clients', icon: 'Briefcase', path: '/clients' },
   { id: 'revenue', label: 'Revenue', icon: 'TrendingUp', path: '/revenue' },

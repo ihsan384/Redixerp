@@ -7,6 +7,7 @@ import { DashboardPage } from '@/features/dashboard/DashboardPage'
 // Lazy-loaded or placeholder components for features to keep it clean and buildable
 import { LeadsPage } from '@/features/leads/LeadsPage'
 import { CallCenterPage } from '@/features/call-center/CallCenterPage'
+import { CallHistoryPage } from '@/features/call-history/CallHistoryPage'
 import { FollowUpsPage } from '@/features/followups/FollowUpsPage'
 import { ClientsPage } from '@/features/clients/ClientsPage'
 import { RevenuePage } from '@/features/revenue/RevenuePage'
@@ -56,6 +57,7 @@ export function AppRoutes() {
         <Route index element={<DashboardPage />} />
         <Route path="leads" element={<LeadsPage />} />
         <Route path="call-center" element={<CallCenterPage />} />
+        <Route path="call-history" element={<CallHistoryPage />} />
         <Route path="follow-ups" element={<FollowUpsPage />} />
         <Route path="clients" element={<ClientsPage />} />
         <Route path="revenue" element={<RevenuePage />} />

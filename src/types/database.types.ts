@@ -53,6 +53,12 @@ export interface Database {
           follow_up_date: string | null
           follow_up_time: string | null
           follow_up_reminder: string | null
+          direction: string | null
+          priority: string | null
+          status: string | null
+          recording_url: string | null
+          voice_note_url: string | null
+          tags: string[] | null
           created_at: string
         }
         Insert: Omit<Database['public']['Tables']['calls']['Row'], 'id' | 'created_at'>
