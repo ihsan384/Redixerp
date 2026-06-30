@@ -10,14 +10,10 @@ import {
   User,
   X,
 } from 'lucide-react'
-import { Storage } from '@/lib/storage'
 import { supabase } from '@/lib/supabase'
 import type { Call, Lead, Employee } from '@/types'
 import { format, parseISO } from 'date-fns'
 import { toast } from 'sonner'
-
-const DEMO_MODE = import.meta.env.VITE_SUPABASE_URL === 'https://your-project.supabase.co' ||
-                  !import.meta.env.VITE_SUPABASE_URL
 
 interface RescheduleModalProps {
   isOpen: boolean
@@ -113,10 +109,20 @@ export function FollowUpsPage() {
   const [selectedCall, setSelectedCall] = useState<Call | null>(null)
 
   // Load Data
-  const loadData = () => {
-    setCalls(Storage.getCalls())
-    setLeads(Storage.getLeads())
-    setEmployees(Storage.getEmployees())
+  const loadData = async () => {
+    try {
+      const [{ data: callsData }, { data: leadsData }, { data: empsData }] = await Promise.all([
+        supabase.from('calls').select('*').eq('follow_up', true),
+        supabase.from('leads').select('*'),
+        supabase.from('employees').select('*')
+      ])
+      setCalls((callsData || []) as Call[])
+      setLeads((leadsData || []) as Lead[])
+      setEmployees((empsData || []) as Employee[])
+    } catch (e) {
+      console.error(e)
+      toast.error('Failed to load follow-up schedules')
+    }
   }
 
   useEffect(() => {
@@ -165,31 +171,18 @@ export function FollowUpsPage() {
 
   const handleComplete = async (callId: string) => {
     try {
-      const updatedCalls = calls.map((c) => {
-        if (c.id === callId) {
-          return { ...c, follow_up: false }
-        }
-        return c
-      })
-      Storage.saveCalls(updatedCalls)
+      const { error: callErr } = await supabase.from('calls').update({ follow_up: false } as never).eq('id', callId)
+      if (callErr) throw callErr
 
       const targetCall = calls.find((c) => c.id === callId)
       if (targetCall) {
         const newAct = {
-          id: `act-${Date.now()}`,
           lead_id: targetCall.lead_id,
           employee_id: targetCall.employee_id,
-          type: 'follow_up' as const,
+          type: 'follow_up',
           description: 'Follow-up marked completed.',
-          created_at: new Date().toISOString(),
         }
-        const updatedActs = [newAct, ...Storage.getActivities()]
-        Storage.saveActivities(updatedActs)
-
-        if (!DEMO_MODE) {
-          await supabase.from('calls').update({ follow_up: false } as never).eq('id', callId)
-          await supabase.from('activities').insert(newAct as never)
-        }
+        await supabase.from('activities').insert(newAct as never)
       }
 
       toast.success('Follow-up task marked completed')
@@ -207,42 +200,23 @@ export function FollowUpsPage() {
   const handleSaveReschedule = async (date: string, time: string, reminder: string) => {
     if (!selectedCall) return
     try {
-      const updatedCalls = calls.map((c) => {
-        if (c.id === selectedCall.id) {
-          return {
-            ...c,
-            follow_up_date: date,
-            follow_up_time: time,
-            follow_up_reminder: reminder,
-          }
-        }
-        return c
-      })
-      Storage.saveCalls(updatedCalls)
+      const { error: callErr } = await supabase
+        .from('calls')
+        .update({
+          follow_up_date: date,
+          follow_up_time: time,
+          follow_up_reminder: reminder,
+        } as never)
+        .eq('id', selectedCall.id)
+      if (callErr) throw callErr
 
       const newAct = {
-        id: `act-${Date.now()}`,
         lead_id: selectedCall.lead_id,
         employee_id: selectedCall.employee_id,
         type: 'follow_up' as const,
         description: `Follow-up rescheduled to ${date} ${time}. Notes: ${reminder || 'None'}`,
-        created_at: new Date().toISOString(),
       }
-      const updatedActs = [newAct, ...Storage.getActivities()]
-      Storage.saveActivities(updatedActs)
-
-      if (!DEMO_MODE) {
-        await supabase
-          .from('calls')
-          .update({
-            follow_up_date: date,
-            follow_up_time: time,
-            follow_up_reminder: reminder,
-          } as never)
-          .eq('id', selectedCall.id)
-
-        await supabase.from('activities').insert(newAct as never)
-      }
+      await supabase.from('activities').insert(newAct as never)
 
       toast.success('Follow-up rescheduled successfully')
       setIsRescheduleOpen(false)

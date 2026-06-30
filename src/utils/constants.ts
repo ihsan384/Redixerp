@@ -56,6 +56,8 @@ export const EMPLOYEE_ROLE_LABELS: Record<EmployeeRole, string> = {
   designer: 'Designer',
   developer: 'Developer',
   sales_rep: 'Sales Rep',
+  finance: 'Finance',
+  viewer: 'Viewer',
 }
 
 export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {

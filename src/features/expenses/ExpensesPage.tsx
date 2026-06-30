@@ -12,15 +12,11 @@ import {
   YAxis,
   CartesianGrid,
 } from 'recharts'
-import { Storage } from '@/lib/storage'
 import { supabase } from '@/lib/supabase'
 import type { Expense, ExpenseCategory, PaymentMethod } from '@/types'
 import { EXPENSE_CATEGORY_LABELS } from '@/utils/constants'
 import { formatCurrency } from '@/utils/format'
 import { toast } from 'sonner'
-
-const DEMO_MODE = import.meta.env.VITE_SUPABASE_URL === 'https://your-project.supabase.co' ||
-                  !import.meta.env.VITE_SUPABASE_URL
 
 const COLORS = [
   '#ffffff',
@@ -67,18 +63,8 @@ function AddExpenseModal({ isOpen, onClose, onSave }: AddExpenseModalProps) {
     }
 
     try {
-      if (DEMO_MODE) {
-        const current = Storage.getExpenses()
-        const newExp: Expense = {
-          id: `exp-${Date.now()}`,
-          ...payload,
-          created_at: new Date().toISOString(),
-        }
-        Storage.saveExpenses([newExp, ...current])
-      } else {
-        const { error } = await supabase.from('expenses').insert(payload as never)
-        if (error) throw error
-      }
+      const { error } = await supabase.from('expenses').insert(payload as never)
+      if (error) throw error
 
       toast.success('Expense record created successfully!')
       onSave()
@@ -101,7 +87,7 @@ function AddExpenseModal({ isOpen, onClose, onSave }: AddExpenseModalProps) {
         className="modal-panel z-10 w-full max-w-md space-y-4 p-6"
       >
         <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Log Expense Outflow</h3>
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Record Expense Outflow</h3>
           <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/[0.04] text-zinc-500 hover:text-white transition-colors">
             <X className="w-4.5 h-4.5" />
           </button>
@@ -109,12 +95,12 @@ function AddExpenseModal({ isOpen, onClose, onSave }: AddExpenseModalProps) {
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Expense Item / Title *</label>
+            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Expense Item / Title</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. AWS Cloud Server Bill"
+              placeholder="e.g. AWS Production Server Hosting"
               className="w-full"
               required
             />
@@ -122,26 +108,26 @@ function AddExpenseModal({ isOpen, onClose, onSave }: AddExpenseModalProps) {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Category</label>
+              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Outflow Category</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
                 className="w-full"
               >
-                {Object.entries(EXPENSE_CATEGORY_LABELS).map(([val, label]) => (
-                  <option key={val} value={val}>
-                    {label}
+                {Object.entries(EXPENSE_CATEGORY_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
                   </option>
                 ))}
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Amount (PKR) *</label>
+              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Amount (PKR)</label>
               <input
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="5000"
+                placeholder="45000"
                 className="w-full"
                 required
               />
@@ -149,16 +135,6 @@ function AddExpenseModal({ isOpen, onClose, onSave }: AddExpenseModalProps) {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Date Paid</label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full"
-                required
-              />
-            </div>
             <div className="space-y-1.5">
               <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Payment Method</label>
               <select
@@ -168,20 +144,30 @@ function AddExpenseModal({ isOpen, onClose, onSave }: AddExpenseModalProps) {
               >
                 <option value="card">Credit/Debit Card</option>
                 <option value="bank_transfer">Bank Transfer</option>
-                <option value="online">Online Gateway</option>
                 <option value="cash">Cash</option>
+                <option value="online">Online Gateway</option>
                 <option value="other">Other</option>
               </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Expense Date</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full"
+                required
+              />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Expense Notes</label>
+            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Additional Notes</label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Domains for redix.media"
+              placeholder="e.g. Paid from company bank account"
               className="w-full"
             />
           </div>
@@ -211,8 +197,15 @@ export function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [isAddOpen, setIsAddOpen] = useState(false)
 
-  const loadData = () => {
-    setExpenses(Storage.getExpenses())
+  const loadData = async () => {
+    try {
+      const { data, error } = await supabase.from('expenses').select('*').order('date', { ascending: false })
+      if (error) throw error
+      setExpenses((data || []) as Expense[])
+    } catch (e) {
+      console.error(e)
+      toast.error('Failed to load expenses list')
+    }
   }
 
   useEffect(() => {
@@ -298,8 +291,8 @@ export function ExpensesPage() {
         <div className="flex items-center gap-3">
           <Receipt className="w-5 h-5 text-red-400" />
           <div>
-            <p className="text-sm font-bold text-white">Expense Outlays</p>
-            <p className="text-xs text-zinc-500 mt-0.5">Manage hosting plans, SaaS software licensing, running office costs, and operations salaries.</p>
+            <p className="text-sm font-bold text-white">Operating Expense Ledger</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Track software licenses, domain renewals, advertising outflows, and payroll lines.</p>
           </div>
         </div>
         <button
@@ -310,60 +303,60 @@ export function ExpensesPage() {
         </button>
       </div>
 
-      {/* KPIs Row */}
+      {/* KPI Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Monthly Expense */}
+        {/* Monthly Expenses */}
         <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-lg">
           <div>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">This Month's Spend</p>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Expenses (This Month)</p>
             <h3 className="text-2xl font-bold text-white tracking-tight mt-2">{formatCurrency(monthlyTotal)}</h3>
           </div>
-          <div className="w-10 h-10 bg-red-500/10 border border-red-500/15 text-red-400 rounded-xl flex items-center justify-center">
-            <TrendingDown className="w-5 h-5" />
+          <div className="w-10 h-10 bg-red-500/10 border border-red-500/15 text-red-400 rounded-xl flex items-center justify-center shadow-inner">
+            <TrendingDown className="w-5 h-5 animate-pulse" />
           </div>
         </div>
 
-        {/* Yearly Expense */}
+        {/* Yearly Expenses */}
         <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-lg">
           <div>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Year-to-Date Outflow</p>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Expenses (This Year)</p>
             <h3 className="text-2xl font-bold text-white tracking-tight mt-2">{formatCurrency(yearlyTotal)}</h3>
           </div>
-          <div className="w-10 h-10 bg-neutral-800 border border-white/[0.08] text-white rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-white/[0.02] border border-white/[0.08] text-zinc-400 rounded-xl flex items-center justify-center shadow-inner">
             <DollarSign className="w-5 h-5" />
           </div>
         </div>
 
-        {/* All-time Spent */}
+        {/* Lifetime Expenses */}
         <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-lg">
           <div>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Gross Outflow Logged</p>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Accounts Payable (All Time)</p>
             <h3 className="text-2xl font-bold text-white tracking-tight mt-2">{formatCurrency(totalAllTime)}</h3>
           </div>
-          <div className="w-10 h-10 bg-yellow-500/10 border border-yellow-500/15 text-yellow-400 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-white/[0.02] border border-white/[0.08] text-zinc-400 rounded-xl flex items-center justify-center shadow-inner">
             <ArrowUpRight className="w-5 h-5" />
           </div>
         </div>
       </div>
 
-      {/* Visual Analytics */}
+      {/* Chart Rows */}
       {expenses.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Pie Chart of category breakdown */}
-          <div className="lg:col-span-1 border border-white/[0.08] bg-[#111111]/60 backdrop-blur-md rounded-2xl p-5 flex flex-col justify-between shadow-md">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-1.5">
-              <PieIcon className="w-4 h-4 text-zinc-500" /> Spend Breakdown
+          {/* Pie Chart: Categories (1/3 width) */}
+          <div className="border border-white/[0.08] bg-[#111111]/60 backdrop-blur-md rounded-2xl p-6 shadow-md lg:col-span-1">
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-5 flex items-center gap-2">
+              <PieIcon className="w-4 h-4 text-zinc-500" /> Outflows Category Share
             </h4>
-
-            <div className="h-52 relative flex items-center justify-center">
+            <div className="h-64 relative flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
+                  <Tooltip content={<CustomPieTooltip />} />
                   <Pie
                     data={categoryChartData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={55}
-                    outerRadius={75}
+                    innerRadius={60}
+                    outerRadius={80}
                     paddingAngle={3}
                     dataKey="value"
                   >
@@ -371,38 +364,24 @@ export function ExpensesPage() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip content={<CustomPieTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-
-            {/* Legends list */}
-            <div className="mt-4 grid grid-cols-2 gap-2 text-[10px] text-zinc-400 font-bold border-t border-white/[0.06] pt-3.5">
-              {categoryChartData.map((d, idx) => (
-                <div key={d.name} className="flex items-center gap-1.5 truncate">
-                  <span
-                    className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
-                    style={{ backgroundColor: COLORS[idx % COLORS.length] }}
-                  />
-                  <span className="truncate">{d.name}</span>
-                </div>
-              ))}
-            </div>
           </div>
 
-          {/* Bar Chart of Monthly trends */}
-          <div className="lg:col-span-2 border border-white/[0.08] bg-[#111111]/60 backdrop-blur-md rounded-2xl p-5 shadow-md">
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-5 flex items-center gap-1.5">
-              <TrendingDown className="w-4 h-4 text-zinc-500" /> Month-on-Month Expenditures
+          {/* Bar Chart: Trends (2/3 width) */}
+          <div className="border border-white/[0.08] bg-[#111111]/60 backdrop-blur-md rounded-2xl p-6 shadow-md lg:col-span-2">
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-5 flex items-center gap-2">
+              <Receipt className="w-4 h-4 text-zinc-500" /> Monthly billing outflows trends
             </h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={trendChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid stroke="rgba(255, 255, 255, 0.03)" strokeDasharray="3 3" vertical={false} />
+                  <CartesianGrid stroke="rgba(255, 255, 255, 0.03)" vertical={false} strokeDasharray="3 3" />
                   <XAxis dataKey="name" stroke="#71717A" fontSize={11} tickLine={false} axisLine={false} tick={{ fontWeight: 500 }} />
                   <YAxis stroke="#71717A" fontSize={11} tickLine={false} axisLine={false} tick={{ fontWeight: 500 }} />
                   <Tooltip content={<CustomTrendTooltip />} />
-                  <Bar dataKey="amount" fill="#ffffff" radius={[4, 4, 0, 0]} barSize={28} />
+                  <Bar dataKey="amount" fill="#ffffff" radius={[4, 4, 0, 0]} maxBarSize={30} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -410,16 +389,16 @@ export function ExpensesPage() {
         </div>
       )}
 
-      {/* Ledger Table List */}
+      {/* Structured Ledger Table */}
       <div className="table-shell">
         <div className="px-5 py-4 border-b border-white/[0.06] bg-white/[0.02]">
-          <h4 className="text-xs font-bold text-white uppercase tracking-wider">Outlay Billing Journals</h4>
+          <h4 className="text-xs font-bold text-white uppercase tracking-wider">Outflow Ledger Logs</h4>
         </div>
 
         <div className="overflow-x-auto">
           {expenses.length === 0 ? (
             <div className="p-8 text-center text-xs text-zinc-600 font-bold italic animate-pulse">
-              No expenditures recorded. Click Log Expense to register payments.
+              No outflow logs recorded. Click Log Expense to add entries.
             </div>
           ) : (
             <table className="w-full text-left border-collapse">
@@ -428,7 +407,7 @@ export function ExpensesPage() {
                   <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Expense Item</th>
                   <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Category</th>
                   <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Amount</th>
-                  <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Date Paid</th>
+                  <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Date Logged</th>
                   <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Method</th>
                   <th className="py-3 px-4 text-xs font-semibold text-zinc-500 tracking-wider">Notes</th>
                 </tr>
@@ -438,17 +417,17 @@ export function ExpensesPage() {
                   <tr key={exp.id} className="hover:bg-white/[0.01] transition-colors">
                     <td className="py-3 px-4 text-xs font-bold text-white">{exp.title}</td>
                     <td className="py-3 px-4 text-xs text-zinc-400 font-medium">
-                      {EXPENSE_CATEGORY_LABELS[exp.category]}
+                      {EXPENSE_CATEGORY_LABELS[exp.category] || exp.category}
                     </td>
                     <td className="py-3 px-4 text-xs font-bold text-white">
                       {formatCurrency(exp.amount)}
                     </td>
                     <td className="py-3 px-4 text-xs text-zinc-400 font-medium">{exp.date}</td>
                     <td className="py-3 px-4 text-xs text-zinc-400 capitalize font-medium">
-                      {exp.payment_method}
+                      {exp.payment_method.replace('_', ' ')}
                     </td>
                     <td className="py-3 px-4 text-xs text-zinc-500 truncate max-w-xs font-medium">
-                      {exp.notes || '--'}
+                      {exp.notes || '—'}
                     </td>
                   </tr>
                 ))}
@@ -458,8 +437,12 @@ export function ExpensesPage() {
         </div>
       </div>
 
-      {/* Add Expense Form Dialog */}
-      <AddExpenseModal isOpen={isAddOpen} onClose={() => setIsAddOpen(false)} onSave={loadData} />
+      {/* Form Dialog */}
+      <AddExpenseModal
+        isOpen={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
+        onSave={loadData}
+      />
     </div>
   )
 }

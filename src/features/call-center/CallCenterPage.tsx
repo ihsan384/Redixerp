@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   Phone,
@@ -15,7 +15,6 @@ import {
   Activity as ActivityIcon,
 } from 'lucide-react'
 import { useLeads } from '../leads/hooks/useLeads'
-import { Storage } from '@/lib/storage'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '../auth/AuthContext'
 import { CALL_OUTCOME_LABELS } from '@/utils/constants'
@@ -23,9 +22,6 @@ import { LeadStatusBadge } from '../leads/components/LeadStatusBadge'
 import type { Lead, Call, Activity, CallOutcome, LeadStatus } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
-
-const DEMO_MODE = import.meta.env.VITE_SUPABASE_URL === 'https://your-project.supabase.co' ||
-                  !import.meta.env.VITE_SUPABASE_URL
 
 export function CallCenterPage() {
   const { employee } = useAuth()
@@ -62,15 +58,26 @@ export function CallCenterPage() {
     }
   }, [leads, paramLeadId])
 
+  const fetchActivities = useCallback(async (leadId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('activities')
+        .select('*')
+        .eq('lead_id', leadId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      setActivities((data || []) as Activity[])
+    } catch (e) {
+      console.error('Failed to fetch activities:', e)
+    }
+  }, [])
+
   // Load selected lead activities
   useEffect(() => {
     if (selectedLead) {
-      const acts = Storage.getActivities()
-        .filter((a) => a.lead_id === selectedLead.id)
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      setActivities(acts)
+      fetchActivities(selectedLead.id)
     }
-  }, [selectedLead])
+  }, [selectedLead, fetchActivities])
 
   // Call Timer Effect
   useEffect(() => {
@@ -145,72 +152,38 @@ export function CallCenterPage() {
     }
 
     try {
-      if (DEMO_MODE) {
-        // Save Call in storage
-        const calls = Storage.getCalls()
-        const newCall: Call = {
-          id: `call-${Date.now()}`,
-          ...callPayload,
-        }
-        Storage.saveCalls([newCall, ...calls])
+      // Supabase Save Call
+      const { data: callData, error: callErr } = await supabase
+        .from('calls')
+        .insert(callPayload as never)
+        .select()
+        .single()
+      if (callErr) throw callErr
 
-        // Save Activity log
-        const acts = Storage.getActivities()
-        const newAct: Activity = {
-          id: `act-${Date.now()}`,
-          lead_id: selectedLead.id,
-          employee_id: employee?.id || 'emp-1',
-          type: outcome === 'converted' ? 'converted' : 'call',
-          description: `Called. Outcome: ${CALL_OUTCOME_LABELS[outcome]}. Notes: ${callNotes || 'No notes added.'}`,
-          created_at: new Date().toISOString(),
-        }
-        Storage.saveActivities([newAct, ...acts])
-
-        // Update Lead Details
-        await updateLead({
-          id: selectedLead.id,
-          data: {
-            status: updatedStatus,
-            notes: callNotes || selectedLead.notes,
-          },
-        })
-      } else {
-        // Supabase Save Call
-        const { data: callData, error: callErr } = await supabase
-          .from('calls')
-          .insert(callPayload as never)
-          .select()
-          .single()
-        if (callErr) throw callErr
-
-        // Save Activity
-        const activityPayload = {
-          lead_id: selectedLead.id,
-          employee_id: employee?.id || 'emp-1',
-          type: outcome === 'converted' ? 'converted' : 'call',
-          description: `Called. Outcome: ${CALL_OUTCOME_LABELS[outcome]}. Notes: ${callNotes || 'No notes added.'}`,
-        }
-        await supabase.from('activities').insert(activityPayload as never)
-
-        // Update Lead details
-        await updateLead({
-          id: selectedLead.id,
-          data: {
-            status: updatedStatus,
-            notes: callNotes || selectedLead.notes,
-          },
-        })
+      // Save Activity
+      const activityPayload = {
+        lead_id: selectedLead.id,
+        employee_id: employee?.id || 'emp-1',
+        type: outcome === 'converted' ? 'converted' : 'call',
+        description: `Called. Outcome: ${CALL_OUTCOME_LABELS[outcome]}. Notes: ${callNotes || 'No notes added.'}`,
       }
+      await supabase.from('activities').insert(activityPayload as never)
+
+      // Update Lead details
+      await updateLead({
+        id: selectedLead.id,
+        data: {
+          status: updatedStatus,
+          notes: callNotes || selectedLead.notes,
+        },
+      })
 
       toast.success('Call log entry saved successfully!')
       setIsCalling(false)
       setStartTime(null)
 
       // Refresh activity list
-      const acts = Storage.getActivities()
-        .filter((a) => a.lead_id === selectedLead.id)
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      setActivities(acts)
+      await fetchActivities(selectedLead.id)
 
       // Load next lead in list that is not converted
       const currentIndex = leads.findIndex((l) => l.id === selectedLead.id)

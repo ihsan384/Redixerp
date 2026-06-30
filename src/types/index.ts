@@ -34,7 +34,7 @@ export type CallOutcome =
   | 'spam'
   | 'not_interested'
 
-export type EmployeeRole = 'admin' | 'sales_manager' | 'designer' | 'developer' | 'sales_rep'
+export type EmployeeRole = 'admin' | 'sales_manager' | 'designer' | 'developer' | 'sales_rep' | 'finance' | 'viewer'
 
 export type ActivityType =
   | 'call'
@@ -69,7 +69,9 @@ export interface Employee {
   email: string
   role: EmployeeRole
   avatar_url?: string
+  is_active?: boolean
   created_at: string
+  updated_at?: string
 }
 
 export interface Lead {

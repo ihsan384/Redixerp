@@ -16,14 +16,10 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { Storage } from '@/lib/storage'
 import { supabase } from '@/lib/supabase'
 import type { Lead, Revenue, PaymentStatus, PaymentMethod } from '@/types'
 import { formatCurrency } from '@/utils/format'
 import { toast } from 'sonner'
-
-const DEMO_MODE = import.meta.env.VITE_SUPABASE_URL === 'https://your-project.supabase.co' ||
-                  !import.meta.env.VITE_SUPABASE_URL
 
 interface AddRevenueModalProps {
   isOpen: boolean
@@ -68,18 +64,8 @@ function AddRevenueModal({ isOpen, onClose, leads, onSave }: AddRevenueModalProp
     }
 
     try {
-      if (DEMO_MODE) {
-        const current = Storage.getRevenue()
-        const newRev: Revenue = {
-          id: `rev-${Date.now()}`,
-          ...payload,
-          created_at: new Date().toISOString(),
-        }
-        Storage.saveRevenue([newRev, ...current])
-      } else {
-        const { error } = await supabase.from('revenue').insert(payload as never)
-        if (error) throw error
-      }
+      const { error } = await supabase.from('revenue').insert(payload as never)
+      if (error) throw error
 
       toast.success('Revenue record created successfully!')
       onSave()
@@ -105,7 +91,7 @@ function AddRevenueModal({ isOpen, onClose, leads, onSave }: AddRevenueModalProp
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Select Converted Client *</label>
+            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Client Account</label>
             <select
               value={leadId}
               onChange={(e) => setLeadId(e.target.value)}
@@ -121,12 +107,12 @@ function AddRevenueModal({ isOpen, onClose, leads, onSave }: AddRevenueModalProp
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Package / Deliverable *</label>
+            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Package / Deliverable</label>
             <input
               type="text"
               value={packageName}
               onChange={(e) => setPackageName(e.target.value)}
-              placeholder="e.g. Custom Web Platform"
+              placeholder="e.g. E-Commerce Website & Hosting"
               className="w-full"
               required
             />
@@ -134,7 +120,7 @@ function AddRevenueModal({ isOpen, onClose, leads, onSave }: AddRevenueModalProp
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Amount (PKR) *</label>
+              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Amount (PKR)</label>
               <input
                 type="number"
                 value={amount}
@@ -145,20 +131,7 @@ function AddRevenueModal({ isOpen, onClose, leads, onSave }: AddRevenueModalProp
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Date Received</label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Payment Status</label>
+              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Status</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as PaymentStatus)}
@@ -170,6 +143,9 @@ function AddRevenueModal({ isOpen, onClose, leads, onSave }: AddRevenueModalProp
                 <option value="overdue">Overdue</option>
               </select>
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Payment Method</label>
               <select
@@ -184,15 +160,25 @@ function AddRevenueModal({ isOpen, onClose, leads, onSave }: AddRevenueModalProp
                 <option value="other">Other</option>
               </select>
             </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Date Received</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full"
+                required
+              />
+            </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Transaction Notes</label>
+            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Internal Notes</label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add payment context notes..."
+              placeholder="e.g. Rest due on deployment"
               className="w-full"
             />
           </div>
@@ -223,13 +209,24 @@ export function RevenuePage() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [isAddOpen, setIsAddOpen] = useState(false)
 
-  const loadData = () => {
-    const revs = Storage.getRevenue().map((r) => ({
-      ...r,
-      lead: Storage.getLeads().find((l) => l.id === r.lead_id),
-    }))
-    setRevenues(revs)
-    setLeads(Storage.getLeads())
+  const loadData = async () => {
+    try {
+      const [{ data: revsData }, { data: leadsData }] = await Promise.all([
+        supabase.from('revenue').select('*'),
+        supabase.from('leads').select('*')
+      ])
+      
+      const enrichedRevs = (revsData || []).map((r) => ({
+        ...r,
+        lead: (leadsData || []).find((l) => l.id === r.lead_id),
+      }))
+
+      setRevenues(enrichedRevs as Revenue[])
+      setLeads((leadsData || []) as Lead[])
+    } catch (e) {
+      console.error(e)
+      toast.error('Failed to load revenue transactions')
+    }
   }
 
   useEffect(() => {
@@ -298,7 +295,7 @@ export function RevenuePage() {
         </button>
       </div>
 
-      {/* KPI Stats - Redesigned to support premium borders & fonts */}
+      {/* KPI Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Gross Revenue */}
         <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-lg">

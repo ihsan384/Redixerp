@@ -10,14 +10,10 @@ import {
   Shield,
   X,
 } from 'lucide-react'
-import { Storage } from '@/lib/storage'
 import { supabase } from '@/lib/supabase'
 import type { Employee, Call, Lead, EmployeeRole } from '@/types'
 import { EMPLOYEE_ROLE_LABELS } from '@/utils/constants'
 import { toast } from 'sonner'
-
-const DEMO_MODE = import.meta.env.VITE_SUPABASE_URL === 'https://your-project.supabase.co' ||
-                  !import.meta.env.VITE_SUPABASE_URL
 
 interface AddMemberModalProps {
   isOpen: boolean
@@ -39,25 +35,22 @@ function AddMemberModal({ isOpen, onClose, onSave }: AddMemberModalProps) {
       return
     }
 
-    const payload: Omit<Employee, 'id' | 'created_at'> = {
+    const payload: Omit<Employee, 'id' | 'created_at' | 'updated_at' | 'is_active'> = {
       name,
       email,
       role,
     }
 
     try {
-      if (DEMO_MODE) {
-        const current = Storage.getEmployees()
-        const newEmp: Employee = {
-          id: `emp-${Date.now()}`,
-          ...payload,
-          created_at: new Date().toISOString(),
-        }
-        Storage.saveEmployees([...current, newEmp])
-      } else {
-        const { error } = await supabase.from('employees').insert(payload as never)
-        if (error) throw error
-      }
+      // NOTE: User creation in Supabase auth usually requires admin client / service role or invites.
+      // However, we insert into public.employees to register their CRM profile.
+      // We generate a temporary UUID since they don't have an auth.users ID yet, or they can register themselves later.
+      // If auth trigger is configured, signing up registers their profile automatically.
+      const { error } = await supabase.from('employees').insert({
+        id: crypto.randomUUID(),
+        ...payload,
+      } as never)
+      if (error) throw error
 
       toast.success('Team member added successfully!')
       onSave()
@@ -151,10 +144,20 @@ export function TeamPage() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [isAddOpen, setIsAddOpen] = useState(false)
 
-  const loadData = () => {
-    setEmployees(Storage.getEmployees())
-    setCalls(Storage.getCalls())
-    setLeads(Storage.getLeads())
+  const loadData = async () => {
+    try {
+      const [{ data: empsData }, { data: callsData }, { data: leadsData }] = await Promise.all([
+        supabase.from('employees').select('*'),
+        supabase.from('calls').select('*'),
+        supabase.from('leads').select('*')
+      ])
+      setEmployees((empsData || []) as Employee[])
+      setCalls((callsData || []) as Call[])
+      setLeads((leadsData || []) as Lead[])
+    } catch (e) {
+      console.error(e)
+      toast.error('Failed to load team data')
+    }
   }
 
   useEffect(() => {
@@ -171,16 +174,12 @@ export function TeamPage() {
     const todayCalls = empCalls.filter((c) => c.start_time.startsWith(todayStr)).length
 
     const conversions = empLeads.filter((l) => l.status === 'converted').length
-    const pending = empLeads.filter((l) =>
-      ['new', 'called', 'no_answer', 'busy', 'call_later', 'meeting_scheduled'].includes(l.status)
-    ).length
 
     const perfRate = completed > 0 ? Math.round((conversions / completed) * 100) : 0
 
     return {
       todayCalls,
       completed,
-      pending,
       conversions,
       perfRate,
     }
@@ -237,7 +236,7 @@ export function TeamPage() {
         </div>
 
         {/* Top sales rep */}
-        {topPerformer && (
+        {topPerformer && topPerformer.conversions > -1 && (
           <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-lg">
             <div>
               <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Pipeline Top Closer</p>

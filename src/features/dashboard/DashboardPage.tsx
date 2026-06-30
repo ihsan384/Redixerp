@@ -16,10 +16,10 @@ import { KpiCard } from './components/KpiCard'
 import { DailyCallsChart, ConversionChart, RevenueChart } from './components/Charts'
 import { RecentActivityFeed, UpcomingFollowUps } from './components/ActivityFeed'
 import { formatCurrency } from '@/utils/format'
-import { Storage } from '@/lib/storage'
+import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/features/auth/AuthContext'
 import type { Lead, Call, Activity, Revenue, Expense } from '@/types'
-import { PageHeader } from '@/components/ui/Primitives'
+import { toast } from 'sonner'
 
 export function DashboardPage() {
   const { employee } = useAuth()
@@ -28,19 +28,45 @@ export function DashboardPage() {
   const [activities, setActivities] = useState<Activity[]>([])
   const [revenues, setRevenues] = useState<Revenue[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  const loadDashboardData = async () => {
+    try {
+      const [
+        { data: leadsData },
+        { data: callsData },
+        { data: activitiesData },
+        { data: revenuesData },
+        { data: expensesData },
+      ] = await Promise.all([
+        supabase.from('leads').select('*'),
+        supabase.from('calls').select('*'),
+        supabase.from('activities').select('*'),
+        supabase.from('revenue').select('*'),
+        supabase.from('expenses').select('*'),
+      ])
+
+      setLeads((leadsData || []) as Lead[])
+      setCalls((callsData || []) as Call[])
+      setActivities((activitiesData || []) as Activity[])
+      setRevenues((revenuesData || []) as Revenue[])
+      setExpenses((expensesData || []) as Expense[])
+    } catch (e) {
+      console.error(e)
+      toast.error('Failed to load dashboard data')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    setLeads(Storage.getLeads())
-    setCalls(Storage.getCalls())
-    setActivities(Storage.getActivities())
-    setRevenues(Storage.getRevenue())
-    setExpenses(Storage.getExpenses())
+    loadDashboardData()
   }, [])
 
   // Calculate KPI values
   const totalLeads = leads.length
   const todayStr = new Date().toISOString().split('T')[0]
-  
+
   const todaysCalls = calls.filter((c) => c.start_time.startsWith(todayStr)).length
   const pendingCalls = leads.filter((l) => ['new', 'called', 'no_answer', 'busy', 'call_later'].includes(l.status)).length
   const followUpToday = calls.filter((c) => c.follow_up && c.follow_up_date === todayStr).length
@@ -62,6 +88,17 @@ export function DashboardPage() {
 
   const profit = revenueThisMonth - expensesThisMonth
 
+  if (isLoading) {
+    return (
+      <div className="redix-grid flex min-h-[400px] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-red-400/20 border-t-red-400" />
+          <p className="text-xs font-semibold text-zinc-500">Retrieving operational intelligence logs...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="page-shell page-stack space-y-6">
       {/* Premium Hero Overview Header */}
@@ -71,7 +108,7 @@ export function DashboardPage() {
             <Zap className="w-3.5 h-3.5 fill-red-400/20" /> Active Operations Platform
           </div>
           <h1 className="text-h2 font-bold text-white tracking-tight leading-tight">
-            Welcome back, {employee?.name || 'User'}
+            Welcome back, {employee?.name || 'Representative'}
           </h1>
           <p className="text-caption text-zinc-500 font-medium">
             Here is your agency's pipeline status, collections ledger, and customer outreach metrics today.
@@ -79,7 +116,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* KPI Cards Grid - Premium SaaS layouts */}
+      {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard title="Total Prospects" value={totalLeads.toLocaleString()} icon={<Users className="w-5 h-5" />} index={0} change="+12.4%" changeType="positive" />
         <KpiCard title="Today's Outbound Calls" value={todaysCalls} icon={<Phone className="w-5 h-5" />} index={1} />

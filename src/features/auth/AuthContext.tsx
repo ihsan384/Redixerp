@@ -11,21 +11,11 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string, name: string, role?: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
+  forgotPassword: (email: string) => Promise<{ error: Error | null }>
+  resetPassword: (newPassword: string) => Promise<{ error: Error | null }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
-
-// Demo mode: when Supabase is not configured, use a mock user
-const DEMO_MODE = import.meta.env.VITE_SUPABASE_URL === 'https://your-project.supabase.co' ||
-                  !import.meta.env.VITE_SUPABASE_URL
-
-const DEMO_EMPLOYEE: Employee = {
-  id: 'demo-user-001',
-  name: 'Ihsan',
-  email: 'ihsan@redix.media',
-  role: 'admin',
-  created_at: new Date().toISOString(),
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -34,19 +24,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (DEMO_MODE) {
-      // Auto-login in demo mode
-      setEmployee(DEMO_EMPLOYEE)
-      setIsLoading(false)
-      return
-    }
-
     // Get initial session
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s)
       setUser(s?.user ?? null)
       if (s?.user) {
-        fetchEmployee(s.user.id)
+        fetchOrCreateEmployee(s.user)
       } else {
         setIsLoading(false)
       }
@@ -57,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s)
       setUser(s?.user ?? null)
       if (s?.user) {
-        fetchEmployee(s.user.id)
+        fetchOrCreateEmployee(s.user)
       } else {
         setEmployee(null)
         setIsLoading(false)
@@ -67,55 +50,88 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  async function fetchEmployee(userId: string) {
-    const { data } = await supabase
-      .from('employees')
-      .select('*')
-      .eq('id', userId)
-      .single()
-    setEmployee(data as Employee | null)
-    setIsLoading(false)
+  async function fetchOrCreateEmployee(authUser: User) {
+    try {
+      // Try to fetch existing profile
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('id', authUser.id)
+        .single()
+
+      if (data) {
+        setEmployee(data as Employee)
+      } else if (error && error.code === 'PGRST116') {
+        // Profile doesn't exist — auto-create (fallback if trigger didn't fire)
+        const name = authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User'
+        const newProfile = {
+          id: authUser.id,
+          name,
+          email: authUser.email ?? '',
+          role: 'sales_rep',
+        }
+        const { data: created, error: insertErr } = await supabase
+          .from('employees')
+          .insert(newProfile as never)
+          .select()
+          .single()
+        if (insertErr) {
+          console.error('Failed to create employee profile:', insertErr)
+        }
+        setEmployee(created as Employee | null)
+      } else if (error) {
+        console.error('Failed to fetch employee:', error)
+      }
+    } catch (err) {
+      console.error('Auth profile error:', err)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   async function signIn(email: string, password: string) {
-    if (DEMO_MODE) {
-      setEmployee(DEMO_EMPLOYEE)
-      return { error: null }
-    }
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error: error as Error | null }
   }
 
   async function signUp(email: string, password: string, name: string, role = 'sales_rep') {
-    if (DEMO_MODE) {
-      setEmployee(DEMO_EMPLOYEE)
-      return { error: null }
-    }
-    const { data, error } = await supabase.auth.signUp({ email, password })
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: name, role },
+      },
+    })
     if (!error && data.user) {
-      await supabase.from('employees').insert({
-        id: data.user.id,
-        name,
-        email,
-        role,
-      } as never)
+      // The trigger should create the profile automatically.
+      // If not, fetchOrCreateEmployee will handle it on next auth state change.
     }
     return { error: error as Error | null }
   }
 
   async function signOut() {
-    if (DEMO_MODE) {
-      // In demo mode, do nothing — keep logged in
-      return
-    }
     await supabase.auth.signOut()
     setEmployee(null)
     setUser(null)
     setSession(null)
   }
 
+  async function forgotPassword(email: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+    return { error: error as Error | null }
+  }
+
+  async function resetPassword(newPassword: string) {
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    return { error: error as Error | null }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, session, employee, isLoading, signIn, signUp, signOut }}>
+    <AuthContext.Provider
+      value={{ user, session, employee, isLoading, signIn, signUp, signOut, forgotPassword, resetPassword }}
+    >
       {children}
     </AuthContext.Provider>
   )

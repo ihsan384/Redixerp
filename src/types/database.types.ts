@@ -16,9 +16,11 @@ export interface Database {
           email: string
           role: string
           avatar_url: string | null
+          is_active: boolean
           created_at: string
+          updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['employees']['Row'], 'id' | 'created_at'>
+        Insert: Omit<Database['public']['Tables']['employees']['Row'], 'id' | 'created_at' | 'updated_at' | 'is_active'>
         Update: Partial<Database['public']['Tables']['employees']['Insert']>
       }
       leads: {

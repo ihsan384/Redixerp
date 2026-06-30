@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { cn } from '@/utils/cn'
-import { Storage } from '@/lib/storage'
+import { supabase } from '@/lib/supabase'
 
 const iconMap = {
   LayoutDashboard,
@@ -80,23 +80,31 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const [counts, setCounts] = useState({ leads: 0, calls: 0, followUps: 0 })
 
   useEffect(() => {
-    try {
-      const activeLeads = Storage.getLeads()
-      const activeCalls = Storage.getCalls()
-      const todayStr = new Date().toISOString().split('T')[0]
+    const fetchCounts = async () => {
+      try {
+        const todayStr = new Date().toISOString().split('T')[0]
 
-      const pendingLeads = activeLeads.filter((l) => l.status === 'new').length
-      const queueCalls = activeLeads.filter((l) => l.status !== 'converted').length
-      const activeFollowups = activeCalls.filter((c) => c.follow_up && c.follow_up_date === todayStr).length
+        const [
+          { count: pendingLeads },
+          { count: queueCalls },
+          { count: activeFollowups }
+        ] = await Promise.all([
+          supabase.from('leads').select('count', { count: 'exact', head: true }).eq('status', 'new'),
+          supabase.from('leads').select('count', { count: 'exact', head: true }).neq('status', 'converted'),
+          supabase.from('calls').select('count', { count: 'exact', head: true }).eq('follow_up', true).eq('follow_up_date', todayStr)
+        ])
 
-      setCounts({
-        leads: pendingLeads,
-        calls: queueCalls,
-        followUps: activeFollowups,
-      })
-    } catch (e) {
-      // Storage might not be loaded yet
+        setCounts({
+          leads: pendingLeads || 0,
+          calls: queueCalls || 0,
+          followUps: activeFollowups || 0,
+        })
+      } catch (e) {
+        console.error('Failed to load notification counts:', e)
+      }
     }
+
+    fetchCounts()
   }, [location.pathname])
 
   const getBadgeValue = (id: string) => {

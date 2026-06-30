@@ -2,9 +2,9 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthContext'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { LoginPage } from '@/features/auth/LoginPage'
+import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 
-// Lazy-loaded or placeholder components for features to keep it clean and buildable
 import { LeadsPage } from '@/features/leads/LeadsPage'
 import { CallCenterPage } from '@/features/call-center/CallCenterPage'
 import { CallHistoryPage } from '@/features/call-history/CallHistoryPage'
@@ -44,8 +44,11 @@ function ProtectedRoute({ children }: ProtectedRouteProps) {
 export function AppRoutes() {
   return (
     <Routes>
+      {/* Public routes */}
       <Route path="/login" element={<LoginPage />} />
-      
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+      {/* Protected routes */}
       <Route
         path="/"
         element={

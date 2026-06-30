@@ -15,7 +15,6 @@ import {
   ChevronDown, Filter,
   Loader2,
 } from 'lucide-react'
-import { Storage } from '@/lib/storage'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '../auth/AuthContext'
 import { useLeads } from '../leads/hooks/useLeads'
@@ -26,11 +25,6 @@ import { toast } from 'sonner'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
-
-// ── DEMO MODE ────────────────────────────────────────────────
-const DEMO_MODE =
-  import.meta.env.VITE_SUPABASE_URL === 'https://your-project.supabase.co' ||
-  !import.meta.env.VITE_SUPABASE_URL
 
 // ── HELPERS ──────────────────────────────────────────────────
 const fmtDur = (sec?: number) => {
@@ -233,96 +227,55 @@ export function CallHistoryPage() {
 
   // ── Load Employees ─────────────────────────────────────────
   useEffect(() => {
-    if (DEMO_MODE) setEmployees(Storage.getEmployees())
-    else supabase.from('employees').select('*').then(({ data }) => { if (data) setEmployees(data as Employee[]) })
+    supabase.from('employees').select('*').then(({ data }) => { if (data) setEmployees(data as Employee[]) })
   }, [])
 
   // ── Fetch Calls ────────────────────────────────────────────
   const fetchCalls = useCallback(async () => {
     setIsLoading(true)
     try {
-      if (DEMO_MODE) {
-        const raw = Storage.getCalls()
-        const rawLeads = Storage.getLeads()
-        const rawEmps = Storage.getEmployees()
+      let query = supabase
+        .from('calls')
+        .select('*, lead:leads(*), employee:employees(*)', { count: 'exact' })
+        .order('start_time', { ascending: false })
 
-        let joined = raw.map(c => ({
-          ...c,
-          lead: rawLeads.find(l => l.id === c.lead_id),
-          employee: rawEmps.find(e => e.id === c.employee_id),
-        }))
-
-        if (search) {
-          const s = search.toLowerCase()
-          joined = joined.filter(c =>
-            c.lead?.shop_name?.toLowerCase().includes(s) ||
-            c.lead?.phone?.includes(s) ||
-            c.employee?.name?.toLowerCase().includes(s) ||
-            c.notes?.toLowerCase().includes(s)
-          )
-        }
-        if (filterEmployee !== 'all') joined = joined.filter(c => c.employee_id === filterEmployee)
-        if (filterOutcome !== 'all') joined = joined.filter(c => c.outcome === filterOutcome)
-        if (filterStatus !== 'all') joined = joined.filter(c => (c.status ?? 'completed') === filterStatus)
-        if (filterPriority !== 'all') joined = joined.filter(c => (c.priority ?? 'medium') === filterPriority)
-        if (filterCategory !== 'all') joined = joined.filter(c => c.lead?.category === filterCategory)
-        if (filterDuration !== 'all') {
-          joined = joined.filter(c => {
-            const s = c.duration_seconds ?? 0
-            if (filterDuration === 'short') return s < 60
-            if (filterDuration === 'medium') return s >= 60 && s <= 300
-            if (filterDuration === 'long') return s > 300
-            return true
-          })
-        }
-        if (filterDate !== 'all') {
-          const now = new Date()
-          joined = joined.filter(c => {
-            try {
-              const d = parseISO(c.start_time)
-              if (filterDate === 'today') return isToday(d)
-              if (filterDate === 'yesterday') return isYesterday(d)
-              if (filterDate === '7d') return (now.getTime() - d.getTime()) < 7 * 86400000
-              if (filterDate === '30d') return (now.getTime() - d.getTime()) < 30 * 86400000
-            } catch { return false }
-            return true
-          })
-        }
-
-        joined.sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
-        setAllCalls(joined)
-        setTotalCount(joined.length)
-        setCalls(joined.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE))
-      } else {
-        let query = supabase
-          .from('calls')
-          .select('*, lead:leads(*), employee:employees(*)', { count: 'exact' })
-          .order('start_time', { ascending: false })
-
-        if (filterEmployee !== 'all') query = query.eq('employee_id', filterEmployee)
-        if (filterOutcome !== 'all') query = query.eq('outcome', filterOutcome)
-        if (filterStatus !== 'all') query = query.eq('status', filterStatus)
-        if (filterPriority !== 'all') query = query.eq('priority', filterPriority)
-        if (filterDuration !== 'all') {
-          if (filterDuration === 'short') query = query.lt('duration_seconds', 60)
-          if (filterDuration === 'medium') query = query.gte('duration_seconds', 60).lte('duration_seconds', 300)
-          if (filterDuration === 'long') query = query.gt('duration_seconds', 300)
-        }
-        if (filterDate !== 'all') {
-          const dates: Record<string, string> = {
-            today: new Date(new Date().setHours(0, 0, 0, 0)).toISOString(),
-            '7d': new Date(Date.now() - 7 * 86400000).toISOString(),
-            '30d': new Date(Date.now() - 30 * 86400000).toISOString(),
-          }
-          if (dates[filterDate]) query = query.gte('start_time', dates[filterDate])
-        }
-
-        const { data, count, error } = await query.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
-        if (error) throw error
-        setCalls(data as Call[])
-        setAllCalls(data as Call[])
-        setTotalCount(count ?? 0)
+      if (filterEmployee !== 'all') query = query.eq('employee_id', filterEmployee)
+      if (filterOutcome !== 'all') query = query.eq('outcome', filterOutcome)
+      if (filterStatus !== 'all') query = query.eq('status', filterStatus)
+      if (filterPriority !== 'all') query = query.eq('priority', filterPriority)
+      if (filterDuration !== 'all') {
+        if (filterDuration === 'short') query = query.lt('duration_seconds', 60)
+        if (filterDuration === 'medium') query = query.gte('duration_seconds', 60).lte('duration_seconds', 300)
+        if (filterDuration === 'long') query = query.gt('duration_seconds', 300)
       }
+      if (filterDate !== 'all') {
+        const dates: Record<string, string> = {
+          today: new Date(new Date().setHours(0, 0, 0, 0)).toISOString(),
+          '7d': new Date(Date.now() - 7 * 86400000).toISOString(),
+          '30d': new Date(Date.now() - 30 * 86400000).toISOString(),
+        }
+        if (dates[filterDate]) query = query.gte('start_time', dates[filterDate])
+      }
+
+      // Handle custom text search client side or via basic dynamic queries
+      // If client search exists, query it or select all for search
+      const { data, count, error } = await query.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+      if (error) throw error
+      
+      let fetchedCalls = (data || []) as Call[]
+      if (search) {
+        const s = search.toLowerCase()
+        fetchedCalls = fetchedCalls.filter(c =>
+          c.lead?.shop_name?.toLowerCase().includes(s) ||
+          c.lead?.phone?.includes(s) ||
+          c.employee?.name?.toLowerCase().includes(s) ||
+          c.notes?.toLowerCase().includes(s)
+        )
+      }
+
+      setCalls(fetchedCalls)
+      setAllCalls((data || []) as Call[])
+      setTotalCount(count ?? 0)
     } catch (err) {
       toast.error('Failed to load call logs')
       console.error(err)
@@ -344,31 +297,18 @@ export function CallHistoryPage() {
     setDrawerOpen(true)
     if (!call.lead_id) return
     try {
-      if (DEMO_MODE) {
-        const acts = Storage.getActivities()
-          .filter(a => a.lead_id === call.lead_id)
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        setActivities(acts)
-        const emps = Storage.getEmployees()
-        const prev = Storage.getCalls()
-          .filter(c => c.lead_id === call.lead_id && c.id !== call.id)
-          .map(c => ({ ...c, employee: emps.find(e => e.id === c.employee_id) }))
-          .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
-        setLeadCalls(prev)
-      } else {
-        const [{ data: acts }, { data: prev }] = await Promise.all([
-          supabase.from('activities').select('*, employee:employees(*)').eq('lead_id', call.lead_id).order('created_at', { ascending: false }),
-          supabase.from('calls').select('*, employee:employees(*)').eq('lead_id', call.lead_id).neq('id', call.id).order('start_time', { ascending: false }),
-        ])
-        setActivities((acts ?? []) as Activity[])
-        setLeadCalls((prev ?? []) as Call[])
-      }
+      const [{ data: acts }, { data: prev }] = await Promise.all([
+        supabase.from('activities').select('*, employee:employees(*)').eq('lead_id', call.lead_id).order('created_at', { ascending: false }),
+        supabase.from('calls').select('*, employee:employees(*)').eq('lead_id', call.lead_id).neq('id', call.id).order('start_time', { ascending: false }),
+      ])
+      setActivities((acts ?? []) as Activity[])
+      setLeadCalls((prev ?? []) as Call[])
     } catch (err) { console.error(err) }
   }, [])
 
   // ── Analytics ──────────────────────────────────────────────
   const stats = useMemo(() => {
-    const src = DEMO_MODE ? Storage.getCalls() : allCalls
+    const src = allCalls
     const todayStr = new Date().toDateString()
     const total = src.length
     const today = src.filter(c => { try { return new Date(c.start_time).toDateString() === todayStr } catch { return false } }).length
@@ -387,20 +327,9 @@ export function CallHistoryPage() {
     if (!selectedCall) return
     setSavingNotes(true)
     try {
-      if (DEMO_MODE) {
-        const all = Storage.getCalls()
-        const idx = all.findIndex(c => c.id === selectedCall.id)
-        if (idx !== -1) { all[idx].notes = notesEdit; Storage.saveCalls(all) }
-        Storage.saveActivities([{
-          id: `act-${Date.now()}`, lead_id: selectedCall.lead_id,
-          employee_id: employee?.id ?? 'emp-1', type: 'note',
-          description: `Notes updated: "${notesEdit.slice(0, 80)}"`, created_at: new Date().toISOString(),
-        }, ...Storage.getActivities()])
-      } else {
-        const { error } = await supabase.from('calls').update({ notes: notesEdit } as never).eq('id', selectedCall.id)
-        if (error) throw error
-        await supabase.from('activities').insert({ lead_id: selectedCall.lead_id, employee_id: employee?.id, type: 'note', description: `Notes updated: "${notesEdit.slice(0, 80)}"` } as never)
-      }
+      const { error } = await supabase.from('calls').update({ notes: notesEdit } as never).eq('id', selectedCall.id)
+      if (error) throw error
+      await supabase.from('activities').insert({ lead_id: selectedCall.lead_id, employee_id: employee?.id, type: 'note', description: `Notes updated: "${notesEdit.slice(0, 80)}"` } as never)
       setSelectedCall(prev => prev ? { ...prev, notes: notesEdit } : null)
       toast.success('Notes saved')
       fetchCalls()
@@ -414,20 +343,9 @@ export function CallHistoryPage() {
     setSavingFollowUp(true)
     const patch = { follow_up: true, follow_up_date: followUpDate, follow_up_time: followUpTime }
     try {
-      if (DEMO_MODE) {
-        const all = Storage.getCalls()
-        const idx = all.findIndex(c => c.id === selectedCall.id)
-        if (idx !== -1) { Object.assign(all[idx], patch); Storage.saveCalls(all) }
-        Storage.saveActivities([{
-          id: `act-${Date.now()}`, lead_id: selectedCall.lead_id,
-          employee_id: employee?.id ?? 'emp-1', type: 'follow_up',
-          description: `Follow-up scheduled for ${followUpDate} at ${followUpTime}`, created_at: new Date().toISOString(),
-        }, ...Storage.getActivities()])
-      } else {
-        const { error } = await supabase.from('calls').update(patch as never).eq('id', selectedCall.id)
-        if (error) throw error
-        await supabase.from('activities').insert({ lead_id: selectedCall.lead_id, employee_id: employee?.id, type: 'follow_up', description: `Follow-up scheduled for ${followUpDate} at ${followUpTime}` } as never)
-      }
+      const { error } = await supabase.from('calls').update(patch as never).eq('id', selectedCall.id)
+      if (error) throw error
+      await supabase.from('activities').insert({ lead_id: selectedCall.lead_id, employee_id: employee?.id, type: 'follow_up', description: `Follow-up scheduled for ${followUpDate} at ${followUpTime}` } as never)
       setSelectedCall(prev => prev ? { ...prev, ...patch } : null)
       toast.success('Follow-up scheduled!')
       fetchCalls()
@@ -439,8 +357,8 @@ export function CallHistoryPage() {
   const handleDelete = async (id: string) => {
     if (!window.confirm('Delete this call record permanently?')) return
     try {
-      if (DEMO_MODE) Storage.saveCalls(Storage.getCalls().filter(c => c.id !== id))
-      else { const { error } = await supabase.from('calls').delete().eq('id', id); if (error) throw error }
+      const { error } = await supabase.from('calls').delete().eq('id', id)
+      if (error) throw error
       toast.success('Record deleted')
       setDrawerOpen(false)
       fetchCalls()
@@ -461,7 +379,7 @@ export function CallHistoryPage() {
   // ── Exports ────────────────────────────────────────────────
   const exportCSV = () => {
     try {
-      const src = DEMO_MODE ? allCalls : calls
+      const src = calls
       const headers = ['ID', 'Business', 'Phone', 'Employee', 'Date', 'Start', 'End', 'Duration', 'Direction', 'Outcome', 'Follow-up Date', 'Priority', 'Status', 'Notes']
       const rows = src.map(c => [
         c.id.slice(0, 8), c.lead?.shop_name ?? '', c.lead?.phone ?? '',
@@ -483,7 +401,7 @@ export function CallHistoryPage() {
 
   const exportExcel = () => {
     try {
-      const src = DEMO_MODE ? allCalls : calls
+      const src = calls
       const data = src.map(c => ({
         ID: c.id.slice(0, 8), Business: c.lead?.shop_name ?? '', Phone: c.lead?.phone ?? '',
         Employee: c.employee?.name ?? '', Date: fmtShort(c.start_time),
@@ -514,7 +432,7 @@ export function CallHistoryPage() {
       doc.setFontSize(7)
       doc.setTextColor(150, 150, 150)
       doc.text(`Generated: ${new Date().toLocaleString()} · ${totalCount} total records`, 14, 18)
-      const src = DEMO_MODE ? allCalls : calls
+      const src = calls
       autoTable(doc, {
         startY: 24,
         head: [['Business', 'Phone', 'Employee', 'Date', 'Start', 'End', 'Duration', 'Direction', 'Outcome', 'Priority', 'Status']],
@@ -770,9 +688,7 @@ export function CallHistoryPage() {
         </div>
       </div>
 
-      {/* ════════════════════════════════════════════════════
-          DETAILS DRAWER
-      ════════════════════════════════════════════════════ */}
+      {/* DETAILS DRAWER */}
       {drawerOpen && selectedCall && (
         <div className="fixed inset-0 z-50 flex" style={{ animation: 'fadeIn 0.15s ease-out' }}>
           <div className="flex-1 bg-black/50 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
@@ -809,7 +725,7 @@ export function CallHistoryPage() {
             {/* Body */}
             <div className="flex-1 overflow-y-auto">
 
-              {/* ── DETAILS ──────────────────────────── */}
+              {/* DETAILS */}
               {drawerTab === 'details' && (
                 <div className="p-5 space-y-5">
                   {/* Status badges */}
@@ -930,7 +846,7 @@ export function CallHistoryPage() {
                 </div>
               )}
 
-              {/* ── NOTES ────────────────────────────── */}
+              {/* NOTES */}
               {drawerTab === 'notes' && (
                 <div className="p-5 space-y-4">
                   <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Call Notes</p>
@@ -954,7 +870,7 @@ export function CallHistoryPage() {
                 </div>
               )}
 
-              {/* ── TIMELINE ─────────────────────────── */}
+              {/* TIMELINE */}
               {drawerTab === 'timeline' && (
                 <div className="p-5 space-y-5">
                   {/* This Call Events */}
@@ -1003,7 +919,7 @@ export function CallHistoryPage() {
                 </div>
               )}
 
-              {/* ── HISTORY ──────────────────────────── */}
+              {/* HISTORY */}
               {drawerTab === 'history' && (
                 <div className="p-5 space-y-4">
                   <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Previous Calls — {selectedCall.lead?.shop_name}</p>

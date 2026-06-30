@@ -1,51 +1,62 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Activity, ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, Zap } from 'lucide-react'
+import { Navigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Activity, ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, Zap, Mail, KeyRound, Loader2, CheckCircle2 } from 'lucide-react'
 import { useAuth } from './AuthContext'
 import { toast } from 'sonner'
-import { EMPLOYEE_ROLE_LABELS } from '@/utils/constants'
-import type { EmployeeRole } from '@/types'
 
 export function LoginPage() {
-  const { signIn, signUp } = useAuth()
-  const [isSignUp, setIsSignUp] = useState(false)
+  const { signIn, forgotPassword, employee, isLoading: authLoading } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
-  const [role, setRole] = useState<EmployeeRole>('sales_rep')
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(true)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  // Forgot password
+  const [showForgot, setShowForgot] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotSent, setForgotSent] = useState(false)
+  const [forgotLoading, setForgotLoading] = useState(false)
+
+  // If already logged in, redirect
+  if (employee && !authLoading) {
+    return <Navigate to="/" replace />
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     setError('')
-    setIsLoading(true)
 
-    if (isSignUp) {
-      const { error: authError } = await signUp(email, password, name, role)
-      setIsLoading(false)
-      if (authError) {
-        if (authError.message.includes('rate limit') || authError.message.includes('429')) {
-          setError(
-            authError.message +
-              '. TIP: Go to your Supabase Dashboard > Authentication > Providers > Email and turn off "Confirm email".'
-          )
-        } else {
-          setError(authError.message)
-        }
-      } else {
-        toast.success(
-          'Account registered! If email confirmation is enabled, check your email. Otherwise, you can log in now.'
-        )
-        setIsSignUp(false)
-      }
+    if (!email.trim() || !password.trim()) {
+      setError('Email and password are required')
+      return
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
+
+    setIsLoading(true)
+    const { error: authError } = await signIn(email, password)
+    if (authError) {
+      setError(authError.message)
+    }
+    setIsLoading(false)
+  }
+
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault()
+    if (!forgotEmail.trim()) return
+    setForgotLoading(true)
+    const { error: err } = await forgotPassword(forgotEmail)
+    setForgotLoading(false)
+    if (err) {
+      toast.error(err.message)
     } else {
-      const { error: authError } = await signIn(email, password)
-      if (authError) {
-        setError(authError.message)
-      }
-      setIsLoading(false)
+      setForgotSent(true)
+      toast.success('Password reset email sent! Check your inbox.')
     }
   }
 
@@ -128,143 +139,193 @@ export function LoginPage() {
               <p className="text-xl font-bold tracking-tight text-white leading-none">REDIX</p>
             </div>
 
-            <div className="space-y-2">
-              <span className="eyebrow">Enterprise Access</span>
-              <h2 className="text-[32px] font-bold tracking-tight text-white">
-                {isSignUp ? 'Create Account' : 'Sign in to Redix'}
-              </h2>
-              <p className="text-xs text-zinc-500 font-semibold leading-relaxed">
-                {isSignUp
-                  ? 'Register a new representative account.'
-                  : 'Enter your credentials to continue to the dashboard.'}
-              </p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-              {isSignUp && (
-                <>
-                  <div className="space-y-1.5 animate-fadeIn">
-                    <label htmlFor="name" className="text-[13px] font-semibold text-zinc-300">
-                      Full Name
-                    </label>
-                    <input
-                      id="name"
-                      type="text"
-                      value={name}
-                      onChange={(event) => setName(event.target.value)}
-                      placeholder="Jane Doe"
-                      required
-                      className="w-full"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5 animate-fadeIn">
-                    <label htmlFor="role" className="text-[13px] font-semibold text-zinc-300">
-                      Job Role
-                    </label>
-                    <select
-                      id="role"
-                      value={role}
-                      onChange={(event) => setRole(event.target.value as EmployeeRole)}
-                      required
-                      className="w-full bg-[#161616] border border-white/[0.08] text-white text-xs rounded-xl h-11 px-3.5 focus:outline-none focus:border-red-500 transition-colors"
-                    >
-                      {Object.entries(EMPLOYEE_ROLE_LABELS).map(([val, label]) => (
-                        <option key={val} value={val} className="bg-[#161616] text-white">
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              )}
-
-              <div className="space-y-1.5">
-                <label htmlFor="email" className="text-[13px] font-semibold text-zinc-300">
-                  Work Email Address
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="name@redix.media"
-                  required
-                  className="w-full"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="password" className="text-[13px] font-semibold text-zinc-300">
-                    Password
-                  </label>
-                  <span className="text-[11px] font-bold text-zinc-600 uppercase tracking-wider">
-                    Protected Access
-                  </span>
-                </div>
-                <div className="relative">
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete={isSignUp ? 'new-password' : 'current-password'}
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder="Enter account password"
-                    required
-                    className="w-full pr-12"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((current) => !current)}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl text-zinc-500 hover:text-white transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
-                  </button>
-                </div>
-              </div>
-
-              {error && (
-                <motion.p
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  role="alert"
-                  className="rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-xs font-bold text-red-400"
+            <AnimatePresence mode="wait">
+              {showForgot ? (
+                <motion.div
+                  key="forgot"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-6"
                 >
-                  {error}
-                </motion.p>
+                  <div className="space-y-2">
+                    <span className="eyebrow">Account Recovery</span>
+                    <h2 className="text-[32px] font-bold tracking-tight text-white">Reset Password</h2>
+                    <p className="text-xs text-zinc-500 font-semibold leading-relaxed">
+                      Enter your email address and we'll send a reset link.
+                    </p>
+                  </div>
+
+                  {forgotSent ? (
+                    <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6 text-center space-y-3">
+                      <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
+                      <p className="text-sm font-bold text-white">Reset email sent!</p>
+                      <p className="text-xs text-zinc-400 leading-relaxed">
+                        Check your inbox for <span className="font-bold text-white">{forgotEmail}</span> and click the reset link.
+                      </p>
+                      <button
+                        onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail('') }}
+                        className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors underline mt-2"
+                      >
+                        Back to Sign In
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleForgotPassword} className="space-y-4 pt-2">
+                      <div className="space-y-1.5">
+                        <label htmlFor="forgot-email" className="text-[13px] font-semibold text-zinc-300">
+                          Email Address
+                        </label>
+                        <div className="relative">
+                          <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+                          <input
+                            id="forgot-email"
+                            type="email"
+                            value={forgotEmail}
+                            onChange={e => setForgotEmail(e.target.value)}
+                            placeholder="name@redix.media"
+                            required
+                            className="w-full pl-10"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={forgotLoading}
+                        className="btn-primary w-full h-11 text-xs font-bold rounded-xl"
+                      >
+                        {forgotLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <span>Send Reset Link</span>
+                            <ArrowRight className="h-4 w-4 shrink-0" />
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowForgot(false)}
+                        className="w-full text-xs font-bold text-zinc-500 hover:text-white transition-colors text-center"
+                      >
+                        Back to Sign In
+                      </button>
+                    </form>
+                  )}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="login"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="space-y-6"
+                >
+                  <div className="space-y-2">
+                    <span className="eyebrow">Enterprise Access</span>
+                    <h2 className="text-[32px] font-bold tracking-tight text-white">Welcome Back</h2>
+                    <p className="text-xs text-zinc-500 font-semibold leading-relaxed">
+                      Enter your credentials to continue to the dashboard.
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+                    <div className="space-y-1.5">
+                      <label htmlFor="email" className="text-[13px] font-semibold text-zinc-300">
+                        Work Email Address
+                      </label>
+                      <input
+                        id="email"
+                        type="email"
+                        autoComplete="email"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                        placeholder="name@redix.media"
+                        required
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label htmlFor="password" className="text-[13px] font-semibold text-zinc-300">
+                          Password
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowForgot(true)}
+                          className="text-[11px] font-bold text-red-400 hover:text-red-300 transition-colors"
+                        >
+                          Forgot Password?
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <input
+                          id="password"
+                          type={showPassword ? 'text' : 'password'}
+                          autoComplete="current-password"
+                          value={password}
+                          onChange={(event) => setPassword(event.target.value)}
+                          placeholder="Enter account password"
+                          required
+                          className="w-full pr-12"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((current) => !current)}
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                          className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl text-zinc-500 hover:text-white transition-colors"
+                        >
+                          {showPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Remember Me */}
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
+                        rememberMe ? 'bg-red-500 border-red-500' : 'border-white/20 bg-white/[0.02]'
+                      }`}>
+                        {rememberMe && <CheckCircle2 className="w-3 h-3 text-white" />}
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={e => setRememberMe(e.target.checked)}
+                        className="sr-only"
+                      />
+                      <span className="text-xs text-zinc-400 font-semibold group-hover:text-white transition-colors">Remember me</span>
+                    </label>
+
+                    {error && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        role="alert"
+                        className="rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-xs font-bold text-red-400"
+                      >
+                        {error}
+                      </motion.p>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="btn-primary w-full h-11 text-xs font-bold rounded-xl mt-2"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="h-4.5 w-4.5 animate-spin" />
+                      ) : (
+                        <>
+                          <span>Authenticate Account</span>
+                          <ArrowRight className="h-4.5 w-4.5 shrink-0" />
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </motion.div>
               )}
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="btn-primary w-full h-11 text-xs font-bold rounded-xl mt-2"
-              >
-                {isLoading ? (
-                  <span className="h-4.5 w-4.5 animate-spin rounded-full border-2 border-white/25 border-t-white" />
-                ) : (
-                  <>
-                    <span>{isSignUp ? 'Register Account' : 'Authenticate Account'}</span>
-                    <ArrowRight className="h-4.5 w-4.5 shrink-0" />
-                  </>
-                )}
-              </button>
-            </form>
-
-            <div className="text-center pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp)
-                  setError('')
-                }}
-                className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors underline"
-              >
-                {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Create one'}
-              </button>
-            </div>
+            </AnimatePresence>
 
             <div className="flex items-center gap-2 text-[10px] text-zinc-600 uppercase font-bold tracking-wider pt-2 border-t border-white/[0.04]">
               <ShieldCheck className="h-4 w-4 text-zinc-600" /> Secure 256-bit encrypted gateway session
@@ -275,4 +336,3 @@ export function LoginPage() {
     </main>
   )
 }
-

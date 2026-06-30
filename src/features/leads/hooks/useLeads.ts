@@ -1,10 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { Storage } from '@/lib/storage'
 import type { Lead, LeadFormData, LeadStatus } from '@/types'
-
-const DEMO_MODE = import.meta.env.VITE_SUPABASE_URL === 'https://your-project.supabase.co' ||
-                  !import.meta.env.VITE_SUPABASE_URL
 
 export function useLeads(filters?: {
   search?: string
@@ -18,38 +14,6 @@ export function useLeads(filters?: {
   const leadsQuery = useQuery({
     queryKey: ['leads', filters],
     queryFn: async (): Promise<Lead[]> => {
-      if (DEMO_MODE) {
-        let leads = Storage.getLeads()
-        const employees = Storage.getEmployees()
-
-        // Apply filters
-        if (filters?.search) {
-          const s = filters.search.toLowerCase()
-          leads = leads.filter(
-            (l) =>
-              l.shop_name.toLowerCase().includes(s) ||
-              l.phone.includes(s) ||
-              l.category.toLowerCase().includes(s) ||
-              (l.website && l.website.toLowerCase().includes(s))
-          )
-        }
-        if (filters?.category && filters.category !== 'all') {
-          leads = leads.filter((l) => l.category === filters.category)
-        }
-        if (filters?.status && filters.status !== 'all') {
-          leads = leads.filter((l) => l.status === filters.status)
-        }
-        if (filters?.assignedTo && filters.assignedTo !== 'all') {
-          leads = leads.filter((l) => l.assigned_to === filters.assignedTo)
-        }
-
-        // Map assigned employee
-        return leads.map((l) => ({
-          ...l,
-          assigned_employee: employees.find((e) => e.id === l.assigned_to),
-        }))
-      }
-
       // Supabase mode
       let query = supabase.from('leads').select('*, assigned_employee:employees(*)')
 
@@ -77,24 +41,6 @@ export function useLeads(filters?: {
   // Add Lead Mutation
   const addLeadMutation = useMutation({
     mutationFn: async (formData: LeadFormData): Promise<Lead> => {
-      const newLead: Lead = {
-        id: DEMO_MODE ? `lead-${Date.now()}` : '',
-        ...formData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }
-
-      if (DEMO_MODE) {
-        const leads = Storage.getLeads()
-        // Duplicate check on phone
-        if (leads.some((l) => l.phone === newLead.phone)) {
-          throw new Error('A business with this phone number already exists.')
-        }
-        leads.unshift(newLead)
-        Storage.saveLeads(leads)
-        return newLead
-      }
-
       // Supabase
       const { data: duplicate } = await supabase
         .from('leads')
@@ -118,16 +64,6 @@ export function useLeads(filters?: {
   // Update Lead Mutation
   const updateLeadMutation = useMutation({
     mutationFn: async ({ id, data: updateData }: { id: string; data: Partial<Lead> }): Promise<Lead> => {
-      if (DEMO_MODE) {
-        const leads = Storage.getLeads()
-        const index = leads.findIndex((l) => l.id === id)
-        if (index === -1) throw new Error('Lead not found')
-        const updated = { ...leads[index], ...updateData, updated_at: new Date().toISOString() }
-        leads[index] = updated
-        Storage.saveLeads(leads)
-        return updated
-      }
-
       // Supabase
       const { data, error } = await supabase
         .from('leads')
@@ -147,30 +83,6 @@ export function useLeads(filters?: {
   // Import Leads Bulk Mutation
   const importLeadsMutation = useMutation({
     mutationFn: async (newLeads: Omit<Lead, 'id' | 'created_at' | 'updated_at'>[]): Promise<number> => {
-      if (DEMO_MODE) {
-        const existingLeads = Storage.getLeads()
-        const existingPhones = new Set(existingLeads.map((l) => l.phone))
-
-        let importedCount = 0
-        const leadsToInsert: Lead[] = []
-
-        newLeads.forEach((lead) => {
-          if (!existingPhones.has(lead.phone)) {
-            leadsToInsert.push({
-              ...lead,
-              id: `lead-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            existingPhones.add(lead.phone)
-            importedCount++
-          }
-        })
-
-        Storage.saveLeads([...leadsToInsert, ...existingLeads])
-        return importedCount
-      }
-
       // Supabase bulk import with duplicate resolution logic
       // First get existing phones
       const { data: existingPhonesData, error: fetchErr } = await supabase
