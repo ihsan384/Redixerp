@@ -1,1341 +1,1061 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Phone,
-  Globe,
-  MessageSquare,
-  MapPin,
-  Clock,
-  Save,
-  CheckCircle2,
-  Calendar,
-  ChevronRight,
-  PhoneOff,
+  Phone, PhoneOff,
+  Search, Download, FileText, FileSpreadsheet,
+  Volume2, Play, Pause,
+  User, Users, Trash2, Edit3, Save, X,
+  ChevronLeft, ChevronRight,
+  ExternalLink, MessageSquare, MapPin, Globe,
+  History, Clock, Calendar, CalendarClock,
   Star,
+  AlertCircle, CheckCircle2,
   Activity as ActivityIcon,
-  Search,
-  Download,
-  FileText,
-  SlidersHorizontal,
-  Volume2,
-  Play,
-  Pause,
-  User,
-  MoreVertical,
-  Trash2,
-  Briefcase,
-  ArrowRight,
-  ChevronLeft,
-  ListFilter,
-  Tag,
-  ExternalLink,
-  Mail,
-  X,
-  History,
-  AlertCircle,
-  FileSpreadsheet,
+  Tag, RefreshCw,
+  ChevronDown, Filter,
+  Loader2,
 } from 'lucide-react'
-import { useLeads } from '../leads/hooks/useLeads'
 import { Storage } from '@/lib/storage'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '../auth/AuthContext'
+import { useLeads } from '../leads/hooks/useLeads'
 import { CALL_OUTCOME_LABELS, LEAD_CATEGORIES } from '@/utils/constants'
-import { LeadStatusBadge } from '../leads/components/LeadStatusBadge'
-import type { Lead, Call, Activity, CallOutcome, LeadStatus, Employee } from '@/types'
-import { formatDistanceToNow, format } from 'date-fns'
+import type { Lead, Call, Activity, CallOutcome, Employee } from '@/types'
+import { format, formatDistanceToNow, isToday, isYesterday, parseISO, isPast } from 'date-fns'
 import { toast } from 'sonner'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 
-const DEMO_MODE = import.meta.env.VITE_SUPABASE_URL === 'https://your-project.supabase.co' ||
-                  !import.meta.env.VITE_SUPABASE_URL
+// ── DEMO MODE ────────────────────────────────────────────────
+const DEMO_MODE =
+  import.meta.env.VITE_SUPABASE_URL === 'https://your-project.supabase.co' ||
+  !import.meta.env.VITE_SUPABASE_URL
 
+// ── HELPERS ──────────────────────────────────────────────────
+const fmtDur = (sec?: number) => {
+  if (!sec || sec <= 0) return '—'
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+  return m > 0 ? `${m}m ${s}s` : `${s}s`
+}
+
+const fmtDate = (iso?: string) => {
+  if (!iso) return '—'
+  try {
+    const d = parseISO(iso)
+    if (isToday(d)) return `Today ${format(d, 'hh:mm a')}`
+    if (isYesterday(d)) return `Yesterday ${format(d, 'hh:mm a')}`
+    return format(d, 'MMM dd, hh:mm a')
+  } catch { return '—' }
+}
+
+const fmtShort = (iso?: string) => {
+  if (!iso) return '—'
+  try { return format(parseISO(iso), 'MMM dd yyyy') } catch { return '—' }
+}
+
+// ── OUTCOME COLORS ───────────────────────────────────────────
+const OUTCOME_COLORS: Record<CallOutcome, { bg: string; text: string; border: string }> = {
+  connected:         { bg: 'bg-sky-500/10',     text: 'text-sky-400',     border: 'border-sky-500/20' },
+  busy:              { bg: 'bg-orange-500/10',   text: 'text-orange-400',  border: 'border-orange-500/20' },
+  no_answer:         { bg: 'bg-yellow-500/10',   text: 'text-yellow-400',  border: 'border-yellow-500/20' },
+  rejected:          { bg: 'bg-red-500/10',      text: 'text-red-400',     border: 'border-red-500/20' },
+  switched_off:      { bg: 'bg-zinc-700/40',     text: 'text-zinc-400',    border: 'border-zinc-600/30' },
+  interested:        { bg: 'bg-blue-500/10',     text: 'text-blue-400',    border: 'border-blue-500/20' },
+  very_interested:   { bg: 'bg-indigo-500/10',   text: 'text-indigo-400',  border: 'border-indigo-500/20' },
+  meeting_scheduled: { bg: 'bg-purple-500/10',   text: 'text-purple-400',  border: 'border-purple-500/20' },
+  demo_booked:       { bg: 'bg-violet-500/10',   text: 'text-violet-400',  border: 'border-violet-500/20' },
+  proposal_sent:     { bg: 'bg-cyan-500/10',     text: 'text-cyan-400',    border: 'border-cyan-500/20' },
+  follow_up_later:   { bg: 'bg-amber-500/10',    text: 'text-amber-400',   border: 'border-amber-500/20' },
+  converted:         { bg: 'bg-emerald-500/10',  text: 'text-emerald-400', border: 'border-emerald-500/20' },
+  wrong_number:      { bg: 'bg-red-500/10',      text: 'text-red-400',     border: 'border-red-500/20' },
+  spam:              { bg: 'bg-zinc-700/40',     text: 'text-zinc-500',    border: 'border-zinc-600/30' },
+  not_interested:    { bg: 'bg-rose-500/10',     text: 'text-rose-400',    border: 'border-rose-500/20' },
+}
+
+const PRIORITY_CFG = {
+  high:   { label: 'High',   dot: 'bg-red-400',    text: 'text-red-400'   },
+  medium: { label: 'Medium', dot: 'bg-amber-400',  text: 'text-amber-400' },
+  low:    { label: 'Low',    dot: 'bg-zinc-500',   text: 'text-zinc-500'  },
+}
+
+// ── OUTCOME BADGE ─────────────────────────────────────────────
+function OutcomeBadge({ outcome }: { outcome: CallOutcome }) {
+  const c = OUTCOME_COLORS[outcome] ?? { bg: 'bg-zinc-800', text: 'text-zinc-400', border: 'border-zinc-700' }
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border whitespace-nowrap ${c.bg} ${c.text} ${c.border}`}>
+      {CALL_OUTCOME_LABELS[outcome] ?? outcome}
+    </span>
+  )
+}
+
+// ── SKELETON ROW ─────────────────────────────────────────────
+function SkeletonRow() {
+  return (
+    <tr className="border-b border-white/[0.04] animate-pulse">
+      {Array.from({ length: 14 }).map((_, i) => (
+        <td key={i} className="px-4 py-4">
+          <div className="h-3 bg-white/[0.06] rounded" style={{ width: `${35 + (i * 13) % 55}%` }} />
+        </td>
+      ))}
+    </tr>
+  )
+}
+
+// ── AUDIO PLAYER ─────────────────────────────────────────────
+function AudioPlayer({ label, duration: dur }: { label: string; duration: string }) {
+  const [playing, setPlaying] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const toggle = () => {
+    if (playing) {
+      setPlaying(false)
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    } else {
+      setPlaying(true)
+      intervalRef.current = setInterval(() => {
+        setProgress(p => {
+          if (p >= 100) {
+            setPlaying(false)
+            if (intervalRef.current) clearInterval(intervalRef.current)
+            return 0
+          }
+          return p + 0.4
+        })
+      }, 100)
+    }
+  }
+  useEffect(() => () => { if (intervalRef.current) clearInterval(intervalRef.current) }, [])
+
+  return (
+    <div className="bg-white/[0.02] border border-white/[0.07] rounded-xl p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1">
+          <Volume2 className="w-3 h-3" /> {label}
+        </span>
+        <span className="text-[10px] font-mono text-zinc-600">{dur}</span>
+      </div>
+      <div className="flex items-center gap-2.5">
+        <button onClick={toggle}
+          className="w-7 h-7 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 flex items-center justify-center transition-all shrink-0">
+          {playing ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 fill-current ml-0.5" />}
+        </button>
+        <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
+          <div className="h-full bg-red-500 rounded-full transition-all duration-100" style={{ width: `${progress}%` }} />
+        </div>
+        <button onClick={() => toast.info('Download started')}
+          className="w-6 h-6 rounded-lg border border-white/[0.07] text-zinc-500 hover:text-white flex items-center justify-center transition-all">
+          <Download className="w-3 h-3" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── TIMELINE ITEM ─────────────────────────────────────────────
+function TimelineItem({ act }: { act: Activity }) {
+  const cfg: Record<string, { icon: React.ReactNode; color: string }> = {
+    call:          { icon: <Phone className="w-3 h-3" />,         color: 'bg-blue-500/20 text-blue-400' },
+    follow_up:     { icon: <CalendarClock className="w-3 h-3" />, color: 'bg-amber-500/20 text-amber-400' },
+    note:          { icon: <Edit3 className="w-3 h-3" />,         color: 'bg-zinc-700 text-zinc-400' },
+    status_change: { icon: <RefreshCw className="w-3 h-3" />,     color: 'bg-purple-500/20 text-purple-400' },
+    meeting:       { icon: <Calendar className="w-3 h-3" />,      color: 'bg-indigo-500/20 text-indigo-400' },
+    converted:     { icon: <CheckCircle2 className="w-3 h-3" />,  color: 'bg-emerald-500/20 text-emerald-400' },
+    import:        { icon: <Download className="w-3 h-3" />,      color: 'bg-zinc-700 text-zinc-400' },
+  }
+  const c = cfg[act.type] ?? { icon: <ActivityIcon className="w-3 h-3" />, color: 'bg-zinc-700 text-zinc-400' }
+  return (
+    <div className="flex gap-3">
+      <div className="flex flex-col items-center shrink-0">
+        <div className={`w-5 h-5 rounded-full flex items-center justify-center ${c.color}`}>{c.icon}</div>
+        <div className="w-px flex-1 bg-white/[0.05] mt-1" />
+      </div>
+      <div className="pb-4 min-w-0 flex-1">
+        <p className="text-xs text-white leading-relaxed">{act.description}</p>
+        <p className="text-[10px] text-zinc-500 mt-0.5">
+          {act.created_at ? formatDistanceToNow(parseISO(act.created_at), { addSuffix: true }) : ''}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MAIN COMPONENT
+// ══════════════════════════════════════════════════════════════
 export function CallHistoryPage() {
   const { employee } = useAuth()
   const navigate = useNavigate()
-  const { leads, updateLead } = useLeads()
+  const { updateLead } = useLeads()
 
-  // State lists
+  // State
   const [calls, setCalls] = useState<Call[]>([])
+  const [allCalls, setAllCalls] = useState<Call[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [activities, setActivities] = useState<Activity[]>([])
-  const [totalCount, setTotalCount] = useState(0)
+  const [leadCalls, setLeadCalls] = useState<Call[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [totalCount, setTotalCount] = useState(0)
 
   // Pagination
+  const PAGE_SIZE = 15
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
 
-  // Filters & Search
+  // Filters
   const [search, setSearch] = useState('')
-  const [selectedEmployee, setSelectedEmployee] = useState('all')
-  const [selectedOutcome, setSelectedOutcome] = useState('all')
-  const [selectedDuration, setSelectedDuration] = useState('all')
-  const [selectedStatus, setSelectedStatus] = useState('all')
-  const [selectedPriority, setSelectedPriority] = useState('all')
-  const [selectedCategory, setSelectedCategory] = useState('all')
-  const [dateFilter, setDateFilter] = useState('all') // all, today, yesterday, 7days, 30days
+  const [filterEmployee, setFilterEmployee] = useState('all')
+  const [filterOutcome, setFilterOutcome] = useState('all')
+  const [filterDuration, setFilterDuration] = useState('all')
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [filterPriority, setFilterPriority] = useState('all')
+  const [filterCategory, setFilterCategory] = useState('all')
+  const [filterDate, setFilterDate] = useState('all')
+  const [showFilters, setShowFilters] = useState(false)
 
   // Drawer
   const [selectedCall, setSelectedCall] = useState<Call | null>(null)
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerTab, setDrawerTab] = useState<'details' | 'notes' | 'timeline' | 'history'>('details')
 
-  // Drawer notes edit
-  const [editingNotes, setEditingNotes] = useState('')
-  const [isSavingNotes, setIsSavingNotes] = useState(false)
+  // Notes
+  const [notesEdit, setNotesEdit] = useState('')
+  const [savingNotes, setSavingNotes] = useState(false)
 
-  // Drawer lead assignment edit
-  const [editingAssignee, setEditingAssignee] = useState('')
+  // Follow-up
+  const [followUpDate, setFollowUpDate] = useState('')
+  const [followUpTime, setFollowUpTime] = useState('10:00')
+  const [savingFollowUp, setSavingFollowUp] = useState(false)
 
-  // Mock Players State
-  const [isPlayingRecording, setIsPlayingRecording] = useState(false)
-  const [isPlayingVoiceNote, setIsPlayingVoiceNote] = useState(false)
+  // Tags
+  const [tagInput, setTagInput] = useState('')
 
-  // Load basic configurations
+  // ── Load Employees ─────────────────────────────────────────
   useEffect(() => {
-    if (DEMO_MODE) {
-      setEmployees(Storage.getEmployees())
-    } else {
-      supabase.from('employees').select('*').then(({ data }) => {
-        if (data) setEmployees(data as Employee[])
-      })
-    }
+    if (DEMO_MODE) setEmployees(Storage.getEmployees())
+    else supabase.from('employees').select('*').then(({ data }) => { if (data) setEmployees(data as Employee[]) })
   }, [])
 
-  // Load Calls Data (Supabase or Demo Storage)
-  const fetchCalls = async () => {
+  // ── Fetch Calls ────────────────────────────────────────────
+  const fetchCalls = useCallback(async () => {
     setIsLoading(true)
     try {
       if (DEMO_MODE) {
-        let allCalls = Storage.getCalls()
-        const allLeads = Storage.getLeads()
-        const allEmps = Storage.getEmployees()
+        const raw = Storage.getCalls()
+        const rawLeads = Storage.getLeads()
+        const rawEmps = Storage.getEmployees()
 
-        // Attach joins in memory
-        let joinedCalls = allCalls.map((c) => ({
+        let joined = raw.map(c => ({
           ...c,
-          lead: allLeads.find((l) => l.id === c.lead_id),
-          employee: allEmps.find((e) => e.id === c.employee_id),
+          lead: rawLeads.find(l => l.id === c.lead_id),
+          employee: rawEmps.find(e => e.id === c.employee_id),
         }))
 
-        // Search Filter
         if (search) {
           const s = search.toLowerCase()
-          joinedCalls = joinedCalls.filter(
-            (c) =>
-              c.lead?.shop_name.toLowerCase().includes(s) ||
-              c.lead?.phone.includes(s) ||
-              c.employee?.name.toLowerCase().includes(s) ||
-              c.notes?.toLowerCase().includes(s)
+          joined = joined.filter(c =>
+            c.lead?.shop_name?.toLowerCase().includes(s) ||
+            c.lead?.phone?.includes(s) ||
+            c.employee?.name?.toLowerCase().includes(s) ||
+            c.notes?.toLowerCase().includes(s)
           )
         }
-
-        // Employee filter
-        if (selectedEmployee !== 'all') {
-          joinedCalls = joinedCalls.filter((c) => c.employee_id === selectedEmployee)
-        }
-
-        // Outcome filter
-        if (selectedOutcome !== 'all') {
-          joinedCalls = joinedCalls.filter((c) => c.outcome === selectedOutcome)
-        }
-
-        // Priority filter
-        if (selectedPriority !== 'all') {
-          joinedCalls = joinedCalls.filter((c) => (c.priority || 'medium') === selectedPriority)
-        }
-
-        // Status filter
-        if (selectedStatus !== 'all') {
-          joinedCalls = joinedCalls.filter((c) => (c.status || 'completed') === selectedStatus)
-        }
-
-        // Category filter
-        if (selectedCategory !== 'all') {
-          joinedCalls = joinedCalls.filter((c) => c.lead?.category === selectedCategory)
-        }
-
-        // Duration Filter
-        if (selectedDuration !== 'all') {
-          joinedCalls = joinedCalls.filter((c) => {
-            const secs = c.duration_seconds || 0
-            if (selectedDuration === 'short') return secs < 60
-            if (selectedDuration === 'medium') return secs >= 60 && secs <= 300
-            if (selectedDuration === 'long') return secs > 300
+        if (filterEmployee !== 'all') joined = joined.filter(c => c.employee_id === filterEmployee)
+        if (filterOutcome !== 'all') joined = joined.filter(c => c.outcome === filterOutcome)
+        if (filterStatus !== 'all') joined = joined.filter(c => (c.status ?? 'completed') === filterStatus)
+        if (filterPriority !== 'all') joined = joined.filter(c => (c.priority ?? 'medium') === filterPriority)
+        if (filterCategory !== 'all') joined = joined.filter(c => c.lead?.category === filterCategory)
+        if (filterDuration !== 'all') {
+          joined = joined.filter(c => {
+            const s = c.duration_seconds ?? 0
+            if (filterDuration === 'short') return s < 60
+            if (filterDuration === 'medium') return s >= 60 && s <= 300
+            if (filterDuration === 'long') return s > 300
             return true
           })
         }
-
-        // Date Filter
-        if (dateFilter !== 'all') {
+        if (filterDate !== 'all') {
           const now = new Date()
-          joinedCalls = joinedCalls.filter((c) => {
-            const callDate = new Date(c.start_time)
-            const diffTime = Math.abs(now.getTime() - callDate.getTime())
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-            if (dateFilter === 'today') {
-              return callDate.toDateString() === now.toDateString()
-            }
-            if (dateFilter === 'yesterday') {
-              const yesterday = new Date(now)
-              yesterday.setDate(now.getDate() - 1)
-              return callDate.toDateString() === yesterday.toDateString()
-            }
-            if (dateFilter === '7days') return diffDays <= 7
-            if (dateFilter === '30days') return diffDays <= 30
+          joined = joined.filter(c => {
+            try {
+              const d = parseISO(c.start_time)
+              if (filterDate === 'today') return isToday(d)
+              if (filterDate === 'yesterday') return isYesterday(d)
+              if (filterDate === '7d') return (now.getTime() - d.getTime()) < 7 * 86400000
+              if (filterDate === '30d') return (now.getTime() - d.getTime()) < 30 * 86400000
+            } catch { return false }
             return true
           })
         }
 
-        setTotalCount(joinedCalls.length)
-
-        // Paginate & Sort (Newest first)
-        joinedCalls.sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
-        const start = (page - 1) * pageSize
-        const paginated = joinedCalls.slice(start, start + pageSize)
-
-        setCalls(paginated)
+        joined.sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
+        setAllCalls(joined)
+        setTotalCount(joined.length)
+        setCalls(joined.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE))
       } else {
-        // Supabase mode
         let query = supabase
           .from('calls')
-          .select('*, lead:leads!inner(*), employee:employees!inner(*)', { count: 'exact' })
+          .select('*, lead:leads(*), employee:employees(*)', { count: 'exact' })
+          .order('start_time', { ascending: false })
 
-        // Apply filters
-        if (search) {
-          query = query.or(
-            `notes.ilike.%${search}%,lead.shop_name.ilike.%${search}%,lead.phone.ilike.%${search}%,employee.name.ilike.%${search}%`
-          )
+        if (filterEmployee !== 'all') query = query.eq('employee_id', filterEmployee)
+        if (filterOutcome !== 'all') query = query.eq('outcome', filterOutcome)
+        if (filterStatus !== 'all') query = query.eq('status', filterStatus)
+        if (filterPriority !== 'all') query = query.eq('priority', filterPriority)
+        if (filterDuration !== 'all') {
+          if (filterDuration === 'short') query = query.lt('duration_seconds', 60)
+          if (filterDuration === 'medium') query = query.gte('duration_seconds', 60).lte('duration_seconds', 300)
+          if (filterDuration === 'long') query = query.gt('duration_seconds', 300)
         }
-
-        if (selectedEmployee !== 'all') {
-          query = query.eq('employee_id', selectedEmployee)
-        }
-
-        if (selectedOutcome !== 'all') {
-          query = query.eq('outcome', selectedOutcome)
-        }
-
-        if (selectedPriority !== 'all') {
-          query = query.eq('priority', selectedPriority)
-        }
-
-        if (selectedStatus !== 'all') {
-          query = query.eq('status', selectedStatus)
-        }
-
-        if (selectedCategory !== 'all') {
-          query = query.eq('lead.category', selectedCategory)
-        }
-
-        if (selectedDuration !== 'all') {
-          if (selectedDuration === 'short') query = query.lt('duration_seconds', 60)
-          else if (selectedDuration === 'medium') query = query.gte('duration_seconds', 60).lte('duration_seconds', 300)
-          else if (selectedDuration === 'long') query = query.gt('duration_seconds', 300)
-        }
-
-        if (dateFilter !== 'all') {
-          const now = new Date()
-          if (dateFilter === 'today') {
-            const startToday = new Date(now.setHours(0,0,0,0)).toISOString()
-            query = query.gte('start_time', startToday)
-          } else if (dateFilter === 'yesterday') {
-            const yesterday = new Date()
-            yesterday.setDate(yesterday.getDate() - 1)
-            const startYesterday = new Date(yesterday.setHours(0,0,0,0)).toISOString()
-            const endYesterday = new Date(yesterday.setHours(23,59,59,999)).toISOString()
-            query = query.gte('start_time', startYesterday).lte('start_time', endYesterday)
-          } else if (dateFilter === '7days') {
-            const start7 = new Date(now.setDate(now.getDate() - 7)).toISOString()
-            query = query.gte('start_time', start7)
-          } else if (dateFilter === '30days') {
-            const start30 = new Date(now.setDate(now.getDate() - 30)).toISOString()
-            query = query.gte('start_time', start30)
+        if (filterDate !== 'all') {
+          const dates: Record<string, string> = {
+            today: new Date(new Date().setHours(0, 0, 0, 0)).toISOString(),
+            '7d': new Date(Date.now() - 7 * 86400000).toISOString(),
+            '30d': new Date(Date.now() - 30 * 86400000).toISOString(),
           }
+          if (dates[filterDate]) query = query.gte('start_time', dates[filterDate])
         }
 
-        // Pagination & Ordering
-        query = query.order('start_time', { ascending: false })
-        query = query.range((page - 1) * pageSize, page * pageSize - 1)
-
-        const { data, count, error } = await query
+        const { data, count, error } = await query.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
         if (error) throw error
-
         setCalls(data as Call[])
-        setTotalCount(count || 0)
+        setAllCalls(data as Call[])
+        setTotalCount(count ?? 0)
       }
-    } catch (err: unknown) {
-      toast.error('Failed to fetch call logs')
+    } catch (err) {
+      toast.error('Failed to load call logs')
       console.error(err)
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [page, search, filterEmployee, filterOutcome, filterDuration, filterStatus, filterPriority, filterCategory, filterDate])
 
-  useEffect(() => {
-    fetchCalls()
-  }, [page, pageSize, search, selectedEmployee, selectedOutcome, selectedDuration, selectedStatus, selectedPriority, selectedCategory, dateFilter])
+  useEffect(() => { fetchCalls() }, [fetchCalls])
+  useEffect(() => { setPage(1) }, [search, filterEmployee, filterOutcome, filterDuration, filterStatus, filterPriority, filterCategory, filterDate])
 
-  // Lead details loader in drawer
-  const loadDrawerTimelineAndHistory = async (leadId: string) => {
+  // ── Open Drawer ────────────────────────────────────────────
+  const openDrawer = useCallback(async (call: Call) => {
+    setSelectedCall(call)
+    setNotesEdit(call.notes ?? '')
+    setFollowUpDate(call.follow_up_date ?? '')
+    setFollowUpTime(call.follow_up_time ?? '10:00')
+    setDrawerTab('details')
+    setDrawerOpen(true)
+    if (!call.lead_id) return
     try {
       if (DEMO_MODE) {
         const acts = Storage.getActivities()
-          .filter((a) => a.lead_id === leadId)
+          .filter(a => a.lead_id === call.lead_id)
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         setActivities(acts)
+        const emps = Storage.getEmployees()
+        const prev = Storage.getCalls()
+          .filter(c => c.lead_id === call.lead_id && c.id !== call.id)
+          .map(c => ({ ...c, employee: emps.find(e => e.id === c.employee_id) }))
+          .sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())
+        setLeadCalls(prev)
       } else {
-        const { data, error } = await supabase
-          .from('activities')
-          .select('*, employee:employees(*)')
-          .eq('lead_id', leadId)
-          .order('created_at', { ascending: false })
-        if (error) throw error
-        setActivities(data as Activity[])
+        const [{ data: acts }, { data: prev }] = await Promise.all([
+          supabase.from('activities').select('*, employee:employees(*)').eq('lead_id', call.lead_id).order('created_at', { ascending: false }),
+          supabase.from('calls').select('*, employee:employees(*)').eq('lead_id', call.lead_id).neq('id', call.id).order('start_time', { ascending: false }),
+        ])
+        setActivities((acts ?? []) as Activity[])
+        setLeadCalls((prev ?? []) as Call[])
       }
-    } catch (err) {
-      console.error('Failed to load lead timeline', err)
-    }
-  }
+    } catch (err) { console.error(err) }
+  }, [])
 
-  useEffect(() => {
-    if (selectedCall?.lead_id) {
-      loadDrawerTimelineAndHistory(selectedCall.lead_id)
-    }
-  }, [selectedCall])
-
-  // Analytics KPI Stats
+  // ── Analytics ──────────────────────────────────────────────
   const stats = useMemo(() => {
-    // If empty load from memory, otherwise aggregate
-    let allFilteredCalls = calls
-    if (DEMO_MODE) {
-      allFilteredCalls = Storage.getCalls()
-    } else {
-      // In Supabase, if pagination is applied we can fetch a general aggregate or compute on local state
-      // For simplicity, we calculate based on overall calls lists
-    }
+    const src = DEMO_MODE ? Storage.getCalls() : allCalls
+    const todayStr = new Date().toDateString()
+    const total = src.length
+    const today = src.filter(c => { try { return new Date(c.start_time).toDateString() === todayStr } catch { return false } }).length
+    const connected = src.filter(c => ['connected', 'interested', 'very_interested', 'meeting_scheduled', 'demo_booked', 'proposal_sent', 'converted'].includes(c.outcome)).length
+    const missed = src.filter(c => ['no_answer', 'busy', 'rejected', 'switched_off'].includes(c.outcome)).length
+    const converted = src.filter(c => c.outcome === 'converted').length
+    const durations = src.map(c => c.duration_seconds ?? 0).filter(Boolean)
+    const avg = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0
+    const longest = durations.length ? Math.max(...durations) : 0
+    const rate = total > 0 ? Math.round((converted / total) * 100) : 0
+    return { total, today, connected, missed, avg, longest, rate }
+  }, [allCalls])
 
-    const total = allFilteredCalls.length
-    const todayStr = new Date().toISOString().split('T')[0]
-    const today = allFilteredCalls.filter((c) => c.start_time.startsWith(todayStr)).length
-    
-    const connected = allFilteredCalls.filter((c) => 
-      ['connected', 'interested', 'very_interested', 'meeting_scheduled', 'demo_booked', 'proposal_sent', 'converted'].includes(c.outcome)
-    ).length
-    
-    const missed = allFilteredCalls.filter((c) => 
-      ['no_answer', 'busy', 'rejected', 'switched_off'].includes(c.outcome)
-    ).length
-
-    const durations = allFilteredCalls.map((c) => c.duration_seconds || 0).filter(Boolean)
-    const avgDuration = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0
-    const longestCall = durations.length ? Math.max(...durations) : 0
-
-    const converted = allFilteredCalls.filter((c) => c.outcome === 'converted').length
-    const conversionRate = total > 0 ? Math.round((converted / total) * 100) : 0
-
-    return {
-      total,
-      today,
-      connected,
-      missed,
-      avgDuration,
-      longestCall,
-      conversionRate,
-    }
-  }, [calls])
-
-  // Notes update handler
+  // ── Save Notes ─────────────────────────────────────────────
   const handleSaveNotes = async () => {
     if (!selectedCall) return
-    setIsSavingNotes(true)
+    setSavingNotes(true)
     try {
       if (DEMO_MODE) {
-        const allCalls = Storage.getCalls()
-        const index = allCalls.findIndex((c) => c.id === selectedCall.id)
-        if (index !== -1) {
-          allCalls[index].notes = editingNotes
-          Storage.saveCalls(allCalls)
-        }
-        // Save activity log
-        const acts = Storage.getActivities()
-        const newAct: Activity = {
-          id: `act-${Date.now()}`,
-          lead_id: selectedCall.lead_id,
-          employee_id: employee?.id || 'emp-1',
-          type: 'note',
-          description: `Call notes updated: ${editingNotes.slice(0, 60)}...`,
-          created_at: new Date().toISOString(),
-        }
-        Storage.saveActivities([newAct, ...acts])
-        toast.success('Call notes updated successfully')
-        fetchCalls()
+        const all = Storage.getCalls()
+        const idx = all.findIndex(c => c.id === selectedCall.id)
+        if (idx !== -1) { all[idx].notes = notesEdit; Storage.saveCalls(all) }
+        Storage.saveActivities([{
+          id: `act-${Date.now()}`, lead_id: selectedCall.lead_id,
+          employee_id: employee?.id ?? 'emp-1', type: 'note',
+          description: `Notes updated: "${notesEdit.slice(0, 80)}"`, created_at: new Date().toISOString(),
+        }, ...Storage.getActivities()])
       } else {
-        const { error } = await supabase
-          .from('calls')
-          .update({ notes: editingNotes } as never)
-          .eq('id', selectedCall.id)
+        const { error } = await supabase.from('calls').update({ notes: notesEdit } as never).eq('id', selectedCall.id)
         if (error) throw error
-
-        const activityPayload = {
-          lead_id: selectedCall.lead_id,
-          employee_id: employee?.id || 'emp-1',
-          type: 'note',
-          description: `Call notes updated: ${editingNotes.slice(0, 60)}...`,
-        }
-        await supabase.from('activities').insert(activityPayload as never)
-
-        toast.success('Call notes updated successfully')
-        fetchCalls()
+        await supabase.from('activities').insert({ lead_id: selectedCall.lead_id, employee_id: employee?.id, type: 'note', description: `Notes updated: "${notesEdit.slice(0, 80)}"` } as never)
       }
-      setSelectedCall((prev) => prev ? { ...prev, notes: editingNotes } : null)
-    } catch (err) {
-      toast.error('Failed to update notes')
-      console.error(err)
-    } finally {
-      setIsSavingNotes(false)
-    }
+      setSelectedCall(prev => prev ? { ...prev, notes: notesEdit } : null)
+      toast.success('Notes saved')
+      fetchCalls()
+    } catch { toast.error('Failed to save notes') }
+    finally { setSavingNotes(false) }
   }
 
-  // Employee assignment handler
-  const handleAssignEmployee = async (empId: string) => {
+  // ── Save Follow-up ─────────────────────────────────────────
+  const handleSaveFollowUp = async () => {
+    if (!selectedCall || !followUpDate) return
+    setSavingFollowUp(true)
+    const patch = { follow_up: true, follow_up_date: followUpDate, follow_up_time: followUpTime }
+    try {
+      if (DEMO_MODE) {
+        const all = Storage.getCalls()
+        const idx = all.findIndex(c => c.id === selectedCall.id)
+        if (idx !== -1) { Object.assign(all[idx], patch); Storage.saveCalls(all) }
+        Storage.saveActivities([{
+          id: `act-${Date.now()}`, lead_id: selectedCall.lead_id,
+          employee_id: employee?.id ?? 'emp-1', type: 'follow_up',
+          description: `Follow-up scheduled for ${followUpDate} at ${followUpTime}`, created_at: new Date().toISOString(),
+        }, ...Storage.getActivities()])
+      } else {
+        const { error } = await supabase.from('calls').update(patch as never).eq('id', selectedCall.id)
+        if (error) throw error
+        await supabase.from('activities').insert({ lead_id: selectedCall.lead_id, employee_id: employee?.id, type: 'follow_up', description: `Follow-up scheduled for ${followUpDate} at ${followUpTime}` } as never)
+      }
+      setSelectedCall(prev => prev ? { ...prev, ...patch } : null)
+      toast.success('Follow-up scheduled!')
+      fetchCalls()
+    } catch { toast.error('Failed to schedule follow-up') }
+    finally { setSavingFollowUp(false) }
+  }
+
+  // ── Delete ─────────────────────────────────────────────────
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Delete this call record permanently?')) return
+    try {
+      if (DEMO_MODE) Storage.saveCalls(Storage.getCalls().filter(c => c.id !== id))
+      else { const { error } = await supabase.from('calls').delete().eq('id', id); if (error) throw error }
+      toast.success('Record deleted')
+      setDrawerOpen(false)
+      fetchCalls()
+    } catch { toast.error('Failed to delete') }
+  }
+
+  // ── Assign Employee ────────────────────────────────────────
+  const handleAssign = async (empId: string) => {
     if (!selectedCall?.lead_id) return
     try {
-      await updateLead({
-        id: selectedCall.lead_id,
-        data: { assigned_to: empId || undefined }
-      })
-      toast.success('Lead assignment updated successfully')
-      
-      // Update local state details
-      const selectedEmp = employees.find((e) => e.id === empId)
-      setSelectedCall((prev) => 
-        prev && prev.lead 
-          ? { ...prev, lead: { ...prev.lead, assigned_to: empId, assigned_employee: selectedEmp } } 
-          : prev
-      )
-      fetchCalls()
-    } catch (err) {
-      toast.error('Failed to update assignment')
-    }
+      await updateLead({ id: selectedCall.lead_id, data: { assigned_to: empId || undefined } })
+      const emp = employees.find(e => e.id === empId)
+      setSelectedCall(prev => prev?.lead ? { ...prev, lead: { ...prev.lead, assigned_to: empId, assigned_employee: emp } } : prev)
+      toast.success('Assignment updated')
+    } catch { toast.error('Failed to update') }
   }
 
-  // Delete call log record
-  const handleDeleteRecord = async (callId: string) => {
-    if (!window.confirm('Are you sure you want to delete this call record permanently?')) return
+  // ── Exports ────────────────────────────────────────────────
+  const exportCSV = () => {
     try {
-      if (DEMO_MODE) {
-        const allCalls = Storage.getCalls().filter((c) => c.id !== callId)
-        Storage.saveCalls(allCalls)
-        toast.success('Call record deleted successfully')
-        setIsDrawerOpen(false)
-        fetchCalls()
-      } else {
-        const { error } = await supabase.from('calls').delete().eq('id', callId)
-        if (error) throw error
-        toast.success('Call record deleted successfully')
-        setIsDrawerOpen(false)
-        fetchCalls()
-      }
-    } catch (err) {
-      toast.error('Failed to delete call record')
-    }
-  }
-
-  // Export handlers
-  const handleExportCSV = () => {
-    try {
-      const headers = ['Call ID', 'Lead Name', 'Business Name', 'Phone', 'Employee', 'Date', 'Outcome', 'Duration', 'Direction', 'Status', 'Notes']
-      const rows = calls.map((c) => [
-        c.id,
-        c.lead?.shop_name || 'N/A', // Business Name
-        c.lead?.shop_name || 'N/A', // Lead Name placeholder
-        c.lead?.phone || 'N/A',
-        c.employee?.name || 'N/A',
-        c.start_time ? format(new Date(c.start_time), 'yyyy-MM-dd HH:mm') : 'N/A',
-        CALL_OUTCOME_LABELS[c.outcome] || c.outcome,
-        c.duration_seconds ? `${Math.floor(c.duration_seconds / 60)}m ${c.duration_seconds % 60}s` : '0s',
-        c.direction || 'outgoing',
-        c.status || 'completed',
-        c.notes || '',
+      const src = DEMO_MODE ? allCalls : calls
+      const headers = ['ID', 'Business', 'Phone', 'Employee', 'Date', 'Start', 'End', 'Duration', 'Direction', 'Outcome', 'Follow-up Date', 'Priority', 'Status', 'Notes']
+      const rows = src.map(c => [
+        c.id.slice(0, 8), c.lead?.shop_name ?? '', c.lead?.phone ?? '',
+        c.employee?.name ?? '', fmtShort(c.start_time),
+        c.start_time ? format(parseISO(c.start_time), 'HH:mm') : '',
+        c.end_time ? format(parseISO(c.end_time), 'HH:mm') : '',
+        fmtDur(c.duration_seconds), c.direction ?? 'outgoing',
+        CALL_OUTCOME_LABELS[c.outcome] ?? c.outcome,
+        c.follow_up_date ?? '', c.priority ?? 'medium', c.status ?? 'completed', c.notes ?? '',
       ])
-
-      const csvContent = [headers.join(','), ...rows.map((r) => r.map((val) => `"${val.toString().replace(/"/g, '""')}"`).join(','))].join('\n')
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const link = document.createElement('a')
-      link.href = URL.createObjectURL(blob)
-      link.setAttribute('download', `redix_call_history_${Date.now()}.csv`)
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      toast.success('CSV exported successfully')
-    } catch (err) {
-      toast.error('Failed to export CSV')
-    }
+      const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+      a.download = `redix_calls_${Date.now()}.csv`
+      a.click()
+      toast.success('CSV exported')
+    } catch { toast.error('Export failed') }
   }
 
-  const handleExportExcel = () => {
+  const exportExcel = () => {
     try {
-      const data = calls.map((c) => ({
-        'Call ID': c.id,
-        'Business Name': c.lead?.shop_name || 'N/A',
-        'Phone Number': c.lead?.phone || 'N/A',
-        'Sales Rep': c.employee?.name || 'N/A',
-        'Date Placed': c.start_time ? format(new Date(c.start_time), 'yyyy-MM-dd HH:mm') : 'N/A',
-        'Call Outcome': CALL_OUTCOME_LABELS[c.outcome] || c.outcome,
-        'Duration (Secs)': c.duration_seconds || 0,
-        'Call Direction': c.direction || 'outgoing',
-        'Log Status': c.status || 'completed',
-        'Rich Notes': c.notes || '',
+      const src = DEMO_MODE ? allCalls : calls
+      const data = src.map(c => ({
+        ID: c.id.slice(0, 8), Business: c.lead?.shop_name ?? '', Phone: c.lead?.phone ?? '',
+        Employee: c.employee?.name ?? '', Date: fmtShort(c.start_time),
+        Start: c.start_time ? format(parseISO(c.start_time), 'HH:mm') : '',
+        End: c.end_time ? format(parseISO(c.end_time), 'HH:mm') : '',
+        'Duration (s)': c.duration_seconds ?? 0, Direction: c.direction ?? 'outgoing',
+        Outcome: CALL_OUTCOME_LABELS[c.outcome] ?? c.outcome,
+        'Follow-up': c.follow_up_date ?? '', Priority: c.priority ?? 'medium',
+        Status: c.status ?? 'completed', Notes: c.notes ?? '',
       }))
-
       const ws = XLSX.utils.json_to_sheet(data)
       const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, ws, 'Calls Logs')
-      XLSX.writeFile(wb, `redix_call_history_${Date.now()}.xlsx`)
-      toast.success('Excel report downloaded successfully')
-    } catch (err) {
-      toast.error('Failed to export Excel')
-    }
+      XLSX.utils.book_append_sheet(wb, ws, 'Call Logs')
+      XLSX.writeFile(wb, `redix_calls_${Date.now()}.xlsx`)
+      toast.success('Excel exported')
+    } catch { toast.error('Export failed') }
   }
 
-  const handleExportPDF = () => {
+  const exportPDF = () => {
     try {
-      const doc = new jsPDF()
-
-      doc.setFillColor(15, 15, 15)
-      doc.rect(0, 0, 210, 30, 'F')
-      doc.setTextColor(255, 255, 255)
+      const doc = new jsPDF({ orientation: 'landscape' })
+      doc.setFillColor(10, 10, 10)
+      doc.rect(0, 0, 297, 20, 'F')
       doc.setFont('helvetica', 'bold')
-      doc.setFontSize(18)
-      doc.text('REDIX CRM - Call History Logs', 15, 20)
-      
-      doc.setFontSize(8)
-      doc.setTextColor(120, 120, 120)
-      doc.text(`Generated: ${new Date().toLocaleString()}`, 150, 40)
-
-      const tableData = calls.map((c) => [
-        c.lead?.shop_name || 'N/A',
-        c.lead?.phone || 'N/A',
-        c.employee?.name || 'N/A',
-        c.start_time ? format(new Date(c.start_time), 'MM-dd HH:mm') : 'N/A',
-        CALL_OUTCOME_LABELS[c.outcome] || c.outcome,
-        c.duration_seconds ? `${Math.floor(c.duration_seconds / 60)}m ${c.duration_seconds % 60}s` : '0s',
-        c.direction || 'outgoing',
-      ])
-
+      doc.setFontSize(13)
+      doc.setTextColor(255, 255, 255)
+      doc.text('REDIX CRM — Call History Audit Log', 14, 13)
+      doc.setFontSize(7)
+      doc.setTextColor(150, 150, 150)
+      doc.text(`Generated: ${new Date().toLocaleString()} · ${totalCount} total records`, 14, 18)
+      const src = DEMO_MODE ? allCalls : calls
       autoTable(doc, {
-        head: [['Business Name', 'Phone', 'Employee', 'Date/Time', 'Outcome', 'Duration', 'Direction']],
-        body: tableData,
-        startY: 45,
+        startY: 24,
+        head: [['Business', 'Phone', 'Employee', 'Date', 'Start', 'End', 'Duration', 'Direction', 'Outcome', 'Priority', 'Status']],
+        body: src.map(c => [
+          c.lead?.shop_name ?? '—', c.lead?.phone ?? '—', c.employee?.name ?? '—',
+          fmtShort(c.start_time),
+          c.start_time ? format(parseISO(c.start_time), 'HH:mm') : '—',
+          c.end_time ? format(parseISO(c.end_time), 'HH:mm') : '—',
+          fmtDur(c.duration_seconds), c.direction ?? 'outgoing',
+          CALL_OUTCOME_LABELS[c.outcome] ?? c.outcome, c.priority ?? 'medium', c.status ?? 'completed',
+        ]),
         theme: 'striped',
-        headStyles: { fillColor: [30, 30, 30] },
+        headStyles: { fillColor: [25, 25, 25], fontSize: 7.5, fontStyle: 'bold' },
+        bodyStyles: { fontSize: 7 },
       })
-
-      doc.save(`redix_call_history_${Date.now()}.pdf`)
-      toast.success('PDF report downloaded successfully!')
-    } catch (err) {
-      toast.error('Failed to generate PDF')
-      console.error(err)
-    }
+      doc.save(`redix_calls_${Date.now()}.pdf`)
+      toast.success('PDF exported')
+    } catch (e) { toast.error('PDF failed'); console.error(e) }
   }
 
-  const formatDurationText = (sec?: number) => {
-    if (!sec) return '0s'
-    const mins = Math.floor(sec / 60)
-    const secs = sec % 60
-    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`
+  const isOverdue = (call: Call) => {
+    if (!call.follow_up || !call.follow_up_date) return false
+    try { return isPast(parseISO(`${call.follow_up_date}T${call.follow_up_time ?? '23:59'}`)) } catch { return false }
   }
 
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE)
+
+  // ══════════════════════════════════════════════════════════
+  //  RENDER
+  // ══════════════════════════════════════════════════════════
   return (
-    <div className="page-shell page-stack space-y-6 !max-w-7xl">
-      {/* Header Panel */}
-      <div className="panel-card flex items-center justify-between p-5">
+    <div className="page-shell page-stack space-y-5 max-w-full">
+
+      {/* HEADER */}
+      <div className="panel-card flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center shrink-0">
             <History className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-sm font-bold text-white">Call History Registers</p>
-            <p className="text-xs text-zinc-500 mt-0.5">Permanent communication logs, voice recordings, and audit trails for all outbound pipelines.</p>
+            <h1 className="text-sm font-bold text-white">Call History</h1>
+            <p className="text-[11px] text-zinc-500 mt-0.5">Permanent audit trail of every customer interaction · {totalCount} total records</p>
           </div>
         </div>
-
-        {/* Export Actions */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-2 border border-white/[0.08] hover:border-white/15 bg-white/[0.02] hover:bg-white/[0.04] text-white text-[11px] font-bold rounded-xl transition-all h-9"
-          >
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={fetchCalls} className="w-9 h-9 rounded-xl border border-white/[0.08] hover:border-white/15 bg-white/[0.02] hover:bg-white/[0.04] text-zinc-400 hover:text-white flex items-center justify-center transition-all" title="Refresh">
+            <RefreshCw className="w-4 h-4" />
+          </button>
+          <button onClick={exportCSV} className="flex items-center gap-1.5 px-3 h-9 border border-white/[0.08] hover:border-white/15 bg-white/[0.02] hover:bg-white/[0.04] text-white text-[11px] font-bold rounded-xl transition-all">
             <FileText className="w-3.5 h-3.5" /> CSV
           </button>
-          <button
-            onClick={handleExportExcel}
-            className="flex items-center gap-1.5 px-3 py-2 border border-white/[0.08] hover:border-white/15 bg-white/[0.02] hover:bg-white/[0.04] text-white text-[11px] font-bold rounded-xl transition-all h-9"
-          >
+          <button onClick={exportExcel} className="flex items-center gap-1.5 px-3 h-9 border border-white/[0.08] hover:border-white/15 bg-white/[0.02] hover:bg-white/[0.04] text-white text-[11px] font-bold rounded-xl transition-all">
             <FileSpreadsheet className="w-3.5 h-3.5" /> Excel
           </button>
-          <button
-            onClick={handleExportPDF}
-            className="flex items-center gap-1.5 px-3 py-2 border border-white/[0.08] hover:border-white/15 bg-white/[0.02] hover:bg-white/[0.04] text-white text-[11px] font-bold rounded-xl transition-all h-9"
-          >
+          <button onClick={exportPDF} className="flex items-center gap-1.5 px-3 h-9 border border-white/[0.08] hover:border-white/15 bg-white/[0.02] hover:bg-white/[0.04] text-white text-[11px] font-bold rounded-xl transition-all">
             <Download className="w-3.5 h-3.5" /> PDF
           </button>
         </div>
       </div>
 
-      {/* Analytics KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-5 shadow-lg">
-          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Total Calls</p>
-          <h3 className="text-2xl font-bold text-white tracking-tight mt-2">{stats.total}</h3>
-          <span className="text-[10px] text-zinc-600 block mt-1">Lifetime phone calls logged</span>
-        </div>
-        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-5 shadow-lg">
-          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Today's Volume</p>
-          <h3 className="text-2xl font-bold text-red-400 tracking-tight mt-2">{stats.today}</h3>
-          <span className="text-[10px] text-red-500/80 block mt-1">Calls logged today</span>
-        </div>
-        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-5 shadow-lg">
-          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Connected / Missed</p>
-          <h3 className="text-2xl font-bold text-emerald-400 tracking-tight mt-2">
-            {stats.connected} <span className="text-sm text-zinc-500">/ {stats.missed}</span>
-          </h3>
-          <span className="text-[10px] text-emerald-500/80 block mt-1">Answered vs No Answer</span>
-        </div>
-        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-5 shadow-lg">
-          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Avg / Max Duration</p>
-          <h3 className="text-xl font-bold text-white tracking-tight mt-2">
-            {formatDurationText(stats.avgDuration)} <span className="text-sm text-zinc-500">/ {formatDurationText(stats.longestCall)}</span>
-          </h3>
-          <span className="text-[10px] text-zinc-600 block mt-1">Conversion: {stats.conversionRate}%</span>
-        </div>
+      {/* ANALYTICS CARDS */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3">
+        {([
+          { label: 'Total Calls',   value: stats.total,           sub: 'lifetime',    color: 'text-white'        },
+          { label: "Today's",       value: stats.today,           sub: 'calls today', color: 'text-red-400'      },
+          { label: 'Connected',     value: stats.connected,       sub: 'answered',    color: 'text-sky-400'      },
+          { label: 'Missed',        value: stats.missed,          sub: 'no answer',   color: 'text-orange-400'   },
+          { label: 'Avg Duration',  value: fmtDur(stats.avg),     sub: 'per call',    color: 'text-amber-400'    },
+          { label: 'Longest Call',  value: fmtDur(stats.longest), sub: 'recorded',    color: 'text-purple-400'   },
+          { label: 'Conversion',    value: `${stats.rate}%`,      sub: 'converted',   color: 'text-emerald-400'  },
+        ] as const).map(card => (
+          <div key={card.label} className="bg-[#111]/70 border border-white/[0.07] rounded-2xl p-4 space-y-1.5">
+            <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">{card.label}</p>
+            <p className={`text-xl font-bold leading-none ${card.color}`}>{card.value}</p>
+            <p className="text-[9px] text-zinc-600">{card.sub}</p>
+          </div>
+        ))}
       </div>
 
-      {/* Filters and Search Panel */}
-      <div className="border border-white/[0.08] bg-[#111111]/40 rounded-2xl p-5 space-y-4 shadow-md">
-        <div className="flex flex-col lg:flex-row items-center gap-4">
-          {/* Search Box */}
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+      {/* SEARCH + FILTERS */}
+      <div className="bg-[#111]/60 border border-white/[0.07] rounded-2xl p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
             <input
-              type="text"
-              placeholder="Search by lead name, business, phone, rep or notes..."
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                setPage(1)
-              }}
-              className="w-full pl-10 bg-white/[0.02] border border-white/[0.08] focus:border-red-500 text-xs rounded-xl h-10 text-white placeholder-zinc-500 transition-colors"
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search by business, phone, employee or notes…"
+              className="w-full pl-10 pr-4 h-10 bg-white/[0.02] border border-white/[0.08] focus:border-red-500/60 rounded-xl text-xs text-white placeholder-zinc-500 outline-none transition-colors"
             />
           </div>
-
-          {/* Quick Filters Toggles */}
-          <div className="flex items-center gap-3 w-full lg:w-auto overflow-x-auto pb-1 lg:pb-0">
-            <div className="flex items-center gap-1 bg-white/[0.02] border border-white/[0.08] p-1 rounded-xl">
-              <button
-                onClick={() => setDateFilter('all')}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${dateFilter === 'all' ? 'bg-white text-black' : 'text-zinc-400 hover:text-white'}`}
-              >
-                All Time
+          <div className="flex items-center gap-1 bg-white/[0.02] border border-white/[0.07] p-1 rounded-xl shrink-0 overflow-x-auto">
+            {([['all','All'],['today','Today'],['yesterday','Yesterday'],['7d','7 Days'],['30d','30 Days']] as const).map(([v, l]) => (
+              <button key={v} onClick={() => setFilterDate(v)}
+                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap ${filterDate === v ? 'bg-white text-black' : 'text-zinc-400 hover:text-white'}`}>
+                {l}
               </button>
-              <button
-                onClick={() => setDateFilter('today')}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${dateFilter === 'today' ? 'bg-white text-black' : 'text-zinc-400 hover:text-white'}`}
-              >
-                Today
-              </button>
-              <button
-                onClick={() => setDateFilter('yesterday')}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${dateFilter === 'yesterday' ? 'bg-white text-black' : 'text-zinc-400 hover:text-white'}`}
-              >
-                Yesterday
-              </button>
-              <button
-                onClick={() => setDateFilter('7days')}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${dateFilter === '7days' ? 'bg-white text-black' : 'text-zinc-400 hover:text-white'}`}
-              >
-                7 Days
-              </button>
-            </div>
+            ))}
           </div>
+          <button
+            onClick={() => setShowFilters(f => !f)}
+            className={`flex items-center gap-1.5 h-10 px-3 rounded-xl border text-[11px] font-bold transition-all shrink-0 ${showFilters ? 'border-red-500/40 text-red-400 bg-red-500/5' : 'border-white/[0.08] text-zinc-400 hover:text-white bg-white/[0.02]'}`}
+          >
+            <Filter className="w-3.5 h-3.5" /> Filters <ChevronDown className={`w-3 h-3 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+          </button>
         </div>
 
-        {/* Detailed Filters row */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {/* Employee */}
-          <div className="space-y-1">
-            <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Representative</label>
-            <select
-              value={selectedEmployee}
-              onChange={(e) => {
-                setSelectedEmployee(e.target.value)
-                setPage(1)
-              }}
-              className="w-full bg-white/[0.02] border border-white/[0.08] focus:border-red-500 text-xs rounded-lg h-9 px-2 text-white"
-            >
-              <option value="all">All Employees</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>{emp.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Call Outcome */}
-          <div className="space-y-1">
-            <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Outcome</label>
-            <select
-              value={selectedOutcome}
-              onChange={(e) => {
-                setSelectedOutcome(e.target.value)
-                setPage(1)
-              }}
-              className="w-full bg-white/[0.02] border border-white/[0.08] focus:border-red-500 text-xs rounded-lg h-9 px-2 text-white"
-            >
-              <option value="all">All Outcomes</option>
-              {Object.entries(CALL_OUTCOME_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Call Duration */}
-          <div className="space-y-1">
-            <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Duration</label>
-            <select
-              value={selectedDuration}
-              onChange={(e) => {
-                setSelectedDuration(e.target.value)
-                setPage(1)
-              }}
-              className="w-full bg-white/[0.02] border border-white/[0.08] focus:border-red-500 text-xs rounded-lg h-9 px-2 text-white"
-            >
-              <option value="all">Any Duration</option>
-              <option value="short">Short (&lt; 1 min)</option>
-              <option value="medium">Medium (1-5 min)</option>
-              <option value="long">Long (&gt; 5 min)</option>
-            </select>
-          </div>
-
-          {/* Call Status */}
-          <div className="space-y-1">
-            <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Log Status</label>
-            <select
-              value={selectedStatus}
-              onChange={(e) => {
-                setSelectedStatus(e.target.value)
-                setPage(1)
-              }}
-              className="w-full bg-white/[0.02] border border-white/[0.08] focus:border-red-500 text-xs rounded-lg h-9 px-2 text-white"
-            >
-              <option value="all">Any Status</option>
-              <option value="completed">Completed</option>
-              <option value="missed">Missed</option>
-              <option value="voicemail">Voicemail</option>
-            </select>
-          </div>
-
-          {/* Priority */}
-          <div className="space-y-1">
-            <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Priority</label>
-            <select
-              value={selectedPriority}
-              onChange={(e) => {
-                setSelectedPriority(e.target.value)
-                setPage(1)
-              }}
-              className="w-full bg-white/[0.02] border border-white/[0.08] focus:border-red-500 text-xs rounded-lg h-9 px-2 text-white"
-            >
-              <option value="all">Any Priority</option>
-              <option value="low">Low Priority</option>
-              <option value="medium">Medium Priority</option>
-              <option value="high">High Priority</option>
-            </select>
-          </div>
-
-          {/* Category */}
-          <div className="space-y-1">
-            <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Category</label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => {
-                setSelectedCategory(e.target.value)
-                setPage(1)
-              }}
-              className="w-full bg-white/[0.02] border border-white/[0.08] focus:border-red-500 text-xs rounded-lg h-9 px-2 text-white"
-            >
-              <option value="all">All Categories</option>
-              {LEAD_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Table view */}
-      <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl overflow-hidden shadow-lg">
-        {isLoading ? (
-          <div className="p-20 flex flex-col items-center justify-center gap-4">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-red-500/20 border-t-red-500" />
-            <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Fetching logs list...</p>
-          </div>
-        ) : calls.length === 0 ? (
-          <div className="p-20 text-center space-y-3">
-            <PhoneOff className="w-10 h-10 text-zinc-600 mx-auto" />
-            <h4 className="text-sm font-bold text-white uppercase tracking-wider">No Call History Records</h4>
-            <p className="text-xs text-zinc-500 max-w-sm mx-auto leading-relaxed">No call reports found matching your current filter presets. Complete call logs from the Call Center to generate logs.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-white/[0.08] bg-white/[0.01] text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
-                  <th className="px-5 py-4">Call ID</th>
-                  <th className="px-5 py-4">Lead Name</th>
-                  <th className="px-5 py-4">Business Name</th>
-                  <th className="px-5 py-4">Phone Number</th>
-                  <th className="px-5 py-4">Employee</th>
-                  <th className="px-5 py-4">Date & Time</th>
-                  <th className="px-5 py-4 text-center">Duration</th>
-                  <th className="px-5 py-4">Direction</th>
-                  <th className="px-5 py-4">Outcome</th>
-                  <th className="px-5 py-4">Priority</th>
-                  <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.04]">
-                {calls.map((c) => (
-                  <tr
-                    key={c.id}
-                    onClick={() => {
-                      setSelectedCall(c)
-                      setEditingNotes(c.notes || '')
-                      setEditingAssignee(c.lead?.assigned_to || '')
-                      setDrawerTab('details')
-                      setIsDrawerOpen(true)
-                    }}
-                    className="group hover:bg-white/[0.02] cursor-pointer text-xs transition-colors"
-                  >
-                    {/* ID */}
-                    <td className="px-5 py-4.5 font-mono text-[10px] text-zinc-500 group-hover:text-white transition-colors">
-                      {c.id.slice(0, 8)}...
-                    </td>
-
-                    {/* Lead/Contact Name */}
-                    <td className="px-5 py-4.5 font-bold text-white">
-                      {c.lead?.shop_name ? c.lead.shop_name.split(' ')[0] + ' Manager' : 'N/A'}
-                    </td>
-
-                    {/* Business Name */}
-                    <td className="px-5 py-4.5 font-bold text-white group-hover:text-red-400 transition-colors">
-                      {c.lead?.shop_name || 'N/A'}
-                    </td>
-
-                    {/* Phone */}
-                    <td className="px-5 py-4.5 font-medium text-zinc-400">
-                      {c.lead?.phone || 'N/A'}
-                    </td>
-
-                    {/* Employee */}
-                    <td className="px-5 py-4.5 text-zinc-400 font-semibold">
-                      {c.employee?.name || 'N/A'}
-                    </td>
-
-                    {/* Date/Time */}
-                    <td className="px-5 py-4.5 text-zinc-400">
-                      {c.start_time ? format(new Date(c.start_time), 'MMM dd, hh:mm a') : 'N/A'}
-                    </td>
-
-                    {/* Duration */}
-                    <td className="px-5 py-4.5 text-center font-mono text-[11px] text-zinc-400">
-                      {formatDurationText(c.duration_seconds)}
-                    </td>
-
-                    {/* Direction */}
-                    <td className="px-5 py-4.5">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                        (c.direction || 'outgoing') === 'incoming' 
-                          ? 'bg-blue-500/10 text-blue-400' 
-                          : 'bg-zinc-800 text-zinc-400'
-                      }`}>
-                        {c.direction || 'outgoing'}
-                      </span>
-                    </td>
-
-                    {/* Outcome Badge */}
-                    <td className="px-5 py-4.5">
-                      <span className={`inline-flex items-center px-2.5 py-1 border rounded-lg text-[10px] font-bold leading-none ${
-                        c.outcome === 'converted' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                        c.outcome === 'meeting_scheduled' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' :
-                        c.outcome === 'demo_booked' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                        c.outcome === 'interested' || c.outcome === 'very_interested' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                        ['no_answer', 'busy', 'rejected', 'switched_off'].includes(c.outcome) ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                        'bg-zinc-800 text-zinc-400 border-white/[0.08]'
-                      }`}>
-                        {CALL_OUTCOME_LABELS[c.outcome] || c.outcome}
-                      </span>
-                    </td>
-
-                    {/* Priority */}
-                    <td className="px-5 py-4.5">
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider ${
-                        (c.priority || 'medium') === 'high' ? 'text-red-400' :
-                        (c.priority || 'medium') === 'medium' ? 'text-amber-400' :
-                        'text-zinc-500'
-                      }`}>
-                        <Star className={`w-3 h-3 fill-current ${(c.priority || 'medium') === 'high' ? 'text-red-400' : (c.priority || 'medium') === 'medium' ? 'text-amber-400' : 'text-transparent border border-zinc-500'}`} />
-                        {c.priority || 'medium'}
-                      </span>
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-5 py-4.5">
-                      <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold ${
-                        (c.status || 'completed') === 'completed' ? 'text-emerald-400' :
-                        (c.status || 'completed') === 'voicemail' ? 'text-amber-400' :
-                        'text-red-400'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${
-                          (c.status || 'completed') === 'completed' ? 'bg-emerald-400' :
-                          (c.status || 'completed') === 'voicemail' ? 'bg-amber-400' :
-                          'bg-red-400'
-                        }`} />
-                        {c.status || 'completed'}
-                      </span>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-5 py-4.5 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => navigate(`/call-center?leadId=${c.lead_id}`)}
-                          title="Call Lead Again"
-                          className="w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/15 flex items-center justify-center transition-colors"
-                        >
-                          <Phone className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteRecord(c.id)}
-                          title="Delete Record"
-                          className="w-8 h-8 rounded-lg bg-white/[0.02] hover:bg-red-500/10 text-zinc-500 hover:text-red-400 border border-white/[0.08] hover:border-red-500/20 flex items-center justify-center transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {showFilters && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 pt-2 border-t border-white/[0.05]">
+            {[
+              { label: 'Employee', value: filterEmployee, set: setFilterEmployee, opts: [['all','All Reps'], ...employees.map(e => [e.id, e.name])] },
+              { label: 'Outcome', value: filterOutcome, set: setFilterOutcome, opts: [['all','All'], ...Object.entries(CALL_OUTCOME_LABELS)] },
+              { label: 'Duration', value: filterDuration, set: setFilterDuration, opts: [['all','Any'],['short','<1 min'],['medium','1–5 min'],['long','>5 min']] },
+              { label: 'Status', value: filterStatus, set: setFilterStatus, opts: [['all','Any'],['completed','Completed'],['missed','Missed'],['voicemail','Voicemail']] },
+              { label: 'Priority', value: filterPriority, set: setFilterPriority, opts: [['all','Any'],['high','High'],['medium','Medium'],['low','Low']] },
+              { label: 'Category', value: filterCategory, set: setFilterCategory, opts: [['all','All'], ...LEAD_CATEGORIES.map(c => [c, c])] },
+            ].map(f => (
+              <div key={f.label}>
+                <label className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">{f.label}</label>
+                <select value={f.value} onChange={e => f.set(e.target.value)}
+                  className="w-full h-9 px-2 bg-white/[0.02] border border-white/[0.08] rounded-lg text-xs text-white outline-none focus:border-red-500/60">
+                  {f.opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+              </div>
+            ))}
           </div>
         )}
+      </div>
 
-        {/* Pagination controls */}
-        <div className="flex items-center justify-between px-5 py-4 border-t border-white/[0.08] bg-white/[0.01]">
-          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
-            Showing {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, totalCount)} of {totalCount} Records
-          </span>
+      {/* TABLE */}
+      <div className="bg-[#111]/70 border border-white/[0.07] rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left min-w-[1200px]">
+            <thead>
+              <tr className="border-b border-white/[0.06] bg-white/[0.01] text-[9px] font-bold text-zinc-500 uppercase tracking-wider">
+                {['Call ID','Business Name','Contact','Phone','Employee','Date','Start–End','Duration','Direction','Outcome','Next Follow-up','Priority','Status','Actions'].map(h => (
+                  <th key={h} className="px-4 py-3.5 whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/[0.04]">
+              {isLoading
+                ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
+                : calls.length === 0
+                  ? (
+                    <tr>
+                      <td colSpan={14} className="py-20 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <PhoneOff className="w-10 h-10 text-zinc-700" />
+                          <p className="text-sm font-bold text-zinc-500">No call records found</p>
+                          <p className="text-xs text-zinc-600 max-w-xs">Complete calls from the Call Center to populate this log.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                  : calls.map(call => (
+                    <tr key={call.id} onClick={() => openDrawer(call)}
+                      className="group hover:bg-white/[0.025] cursor-pointer transition-colors">
 
-          <div className="flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-1.5">
-              <span className="text-zinc-500 text-[11px] font-semibold">Rows:</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value))
-                  setPage(1)
-                }}
-                className="bg-transparent border-0 text-white font-bold outline-none cursor-pointer"
-              >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
+                      <td className="px-4 py-3.5">
+                        <span className="font-mono text-[10px] text-zinc-600 group-hover:text-zinc-300 transition-colors">{call.id.slice(0, 8)}</span>
+                      </td>
+                      <td className="px-4 py-3.5 max-w-[150px]">
+                        <p className="text-xs font-bold text-white group-hover:text-red-400 transition-colors truncate">{call.lead?.shop_name ?? '—'}</p>
+                        <p className="text-[10px] text-zinc-500 truncate">{call.lead?.category ?? ''}</p>
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-zinc-400 whitespace-nowrap">
+                        {call.lead?.shop_name ? call.lead.shop_name.split(' ')[0] : '—'}
+                      </td>
+                      <td className="px-4 py-3.5 text-xs font-mono text-zinc-400 whitespace-nowrap">{call.lead?.phone ?? '—'}</td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-5 h-5 rounded-full bg-red-500/15 text-red-400 text-[8px] font-bold flex items-center justify-center shrink-0">
+                            {call.employee?.name?.[0] ?? '?'}
+                          </div>
+                          <span className="text-xs text-zinc-300 font-semibold truncate max-w-[90px]">{call.employee?.name ?? '—'}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-zinc-400 whitespace-nowrap">{fmtShort(call.start_time)}</td>
+                      <td className="px-4 py-3.5 text-[10px] font-mono text-zinc-500 whitespace-nowrap">
+                        {call.start_time ? format(parseISO(call.start_time), 'HH:mm') : '—'}
+                        {' – '}
+                        {call.end_time ? format(parseISO(call.end_time), 'HH:mm') : '—'}
+                      </td>
+                      <td className="px-4 py-3.5 text-xs font-mono text-zinc-400 whitespace-nowrap">{fmtDur(call.duration_seconds)}</td>
+                      <td className="px-4 py-3.5">
+                        <span className={`text-[10px] font-bold ${(call.direction ?? 'outgoing') === 'incoming' ? 'text-blue-400' : 'text-zinc-500'}`}>
+                          {(call.direction ?? 'outgoing') === 'incoming' ? '↙ In' : '↗ Out'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5"><OutcomeBadge outcome={call.outcome} /></td>
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        {call.follow_up && call.follow_up_date ? (
+                          <span className={`text-[10px] font-semibold flex items-center gap-1 ${isOverdue(call) ? 'text-red-400' : 'text-amber-400'}`}>
+                            <CalendarClock className="w-3 h-3" />
+                            {fmtShort(call.follow_up_date)}
+                            {isOverdue(call) && <span className="text-[9px] font-bold text-red-500">OVERDUE</span>}
+                          </span>
+                        ) : <span className="text-zinc-700 text-[10px]">—</span>}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {(() => {
+                          const p = (call.priority ?? 'medium') as keyof typeof PRIORITY_CFG
+                          const c = PRIORITY_CFG[p] ?? PRIORITY_CFG.medium
+                          return (
+                            <div className="flex items-center gap-1">
+                              <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
+                              <span className={`text-[10px] font-bold ${c.text}`}>{c.label}</span>
+                            </div>
+                          )
+                        })()}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className={`text-[10px] font-bold uppercase ${
+                          (call.status ?? 'completed') === 'completed' ? 'text-emerald-400' :
+                          (call.status ?? 'completed') === 'missed' ? 'text-red-400' : 'text-amber-400'
+                        }`}>{call.status ?? 'completed'}</span>
+                      </td>
+                      <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-1.5">
+                          <button onClick={() => navigate(`/call-center?leadId=${call.lead_id}`)}
+                            className="w-7 h-7 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/15 flex items-center justify-center transition-all" title="Call Again">
+                            <Phone className="w-3 h-3" />
+                          </button>
+                          <button onClick={() => handleDelete(call.id)}
+                            className="w-7 h-7 rounded-lg hover:bg-red-500/10 text-zinc-600 hover:text-red-400 border border-white/[0.06] flex items-center justify-center transition-all" title="Delete">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+            </tbody>
+          </table>
+        </div>
 
-            <div className="flex items-center gap-1">
-              <button
-                disabled={page === 1}
-                onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                className="w-8 h-8 rounded-lg bg-white/[0.02] border border-white/[0.08] hover:border-white/12 flex items-center justify-center text-white disabled:opacity-30 transition-all"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                disabled={page * pageSize >= totalCount}
-                onClick={() => setPage((p) => p + 1)}
-                className="w-8 h-8 rounded-lg bg-white/[0.02] border border-white/[0.08] hover:border-white/12 flex items-center justify-center text-white disabled:opacity-30 transition-all"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+        {/* Pagination */}
+        <div className="flex items-center justify-between px-5 py-4 border-t border-white/[0.05] bg-white/[0.005]">
+          <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+            {isLoading ? 'Loading…' : `${Math.min((page - 1) * PAGE_SIZE + 1, totalCount)}–${Math.min(page * PAGE_SIZE, totalCount)} of ${totalCount}`}
+          </p>
+          <div className="flex items-center gap-2">
+            <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="w-8 h-8 rounded-lg border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04] text-white disabled:opacity-30 flex items-center justify-center transition-all">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-bold text-zinc-400 min-w-[70px] text-center">Page {page} / {totalPages || 1}</span>
+            <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              className="w-8 h-8 rounded-lg border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04] text-white disabled:opacity-30 flex items-center justify-center transition-all">
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Details Right Drawer */}
-      {isDrawerOpen && selectedCall && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm">
-          {/* Backdrop close */}
-          <div className="flex-1" onClick={() => setIsDrawerOpen(false)} />
+      {/* ════════════════════════════════════════════════════
+          DETAILS DRAWER
+      ════════════════════════════════════════════════════ */}
+      {drawerOpen && selectedCall && (
+        <div className="fixed inset-0 z-50 flex" style={{ animation: 'fadeIn 0.15s ease-out' }}>
+          <div className="flex-1 bg-black/50 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
+          <div className="w-full max-w-[480px] h-full bg-[#0c0c0c] border-l border-white/[0.08] flex flex-col shadow-2xl"
+            style={{ animation: 'slideInRight 0.22s ease-out' }}>
 
-          {/* Drawer container */}
-          <div className="w-full max-w-[500px] h-full bg-[#0a0a0a] border-l border-white/[0.08] flex flex-col justify-between shadow-2xl relative animate-slideLeft">
-            
-            {/* Header info */}
-            <div className="p-6 border-b border-white/[0.08] flex justify-between items-center bg-white/[0.01]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-lg bg-red-500/10 border border-red-500/15 text-red-400 flex items-center justify-center">
-                  <Phone className="w-4.5 h-4.5" />
+            {/* Drawer Header */}
+            <div className="px-5 py-4 border-b border-white/[0.07] flex items-center justify-between bg-white/[0.01] shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center shrink-0">
+                  <Phone className="w-4 h-4" />
                 </div>
-                <div>
-                  <h4 className="text-sm font-bold text-white truncate max-w-[280px]">
-                    {selectedCall.lead?.shop_name || 'Business Details'}
-                  </h4>
-                  <span className="text-[10px] text-zinc-500 uppercase tracking-wider block font-bold mt-0.5">
-                    Call Record ID: {selectedCall.id.slice(0, 8)}...
-                  </span>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-white truncate">{selectedCall.lead?.shop_name ?? 'Call Details'}</h3>
+                  <p className="text-[10px] text-zinc-500 mt-0.5">{selectedCall.lead?.phone ?? ''} · ID {selectedCall.id.slice(0, 8)}</p>
                 </div>
               </div>
-              <button
-                onClick={() => setIsDrawerOpen(false)}
-                className="w-8 h-8 rounded-lg bg-white/[0.02] border border-white/[0.08] hover:border-white/15 text-zinc-500 hover:text-white flex items-center justify-center transition-all"
-              >
+              <button onClick={() => setDrawerOpen(false)}
+                className="w-8 h-8 rounded-lg border border-white/[0.08] hover:border-white/15 text-zinc-500 hover:text-white flex items-center justify-center transition-all shrink-0">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Tab Select buttons */}
-            <div className="flex border-b border-white/[0.06] bg-white/[0.005] px-4">
-              {['details', 'notes', 'timeline', 'history'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setDrawerTab(tab as never)}
-                  className={`px-4 py-3 text-[10px] font-bold uppercase tracking-wider transition-all border-b-2 ${
-                    drawerTab === tab
-                      ? 'border-red-500 text-white'
-                      : 'border-transparent text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
+            {/* Tabs */}
+            <div className="flex border-b border-white/[0.06] bg-black/20 shrink-0">
+              {(['details','notes','timeline','history'] as const).map(tab => (
+                <button key={tab} onClick={() => setDrawerTab(tab)}
+                  className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-wider transition-all border-b-2 ${drawerTab === tab ? 'border-red-500 text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'}`}>
                   {tab}
                 </button>
               ))}
             </div>
 
-            {/* Content Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              
-              {/* Tab 1: Details */}
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto">
+
+              {/* ── DETAILS ──────────────────────────── */}
               {drawerTab === 'details' && (
-                <div className="space-y-6">
-                  {/* Lead Info */}
-                  <div className="space-y-3.5">
-                    <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Business Contacts</h5>
-                    <div className="border border-white/[0.06] bg-white/[0.01] rounded-2xl p-4.5 space-y-3 text-xs leading-relaxed">
-                      <div className="flex justify-between">
-                        <span className="text-zinc-500 font-medium">Business Title:</span>
-                        <span className="text-white font-semibold">{selectedCall.lead?.shop_name || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-500 font-medium">Phone Number:</span>
-                        <span className="text-white font-semibold">{selectedCall.lead?.phone || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-500 font-medium">Domain Category:</span>
-                        <span className="text-white font-semibold">{selectedCall.lead?.category || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-500 font-medium">Office Address:</span>
-                        <span className="text-white text-right max-w-[240px] truncate">{selectedCall.lead?.address || 'N/A'}</span>
-                      </div>
+                <div className="p-5 space-y-5">
+                  {/* Status badges */}
+                  <div className="flex flex-wrap gap-2">
+                    <OutcomeBadge outcome={selectedCall.outcome} />
+                    {(() => {
+                      const p = (selectedCall.priority ?? 'medium') as keyof typeof PRIORITY_CFG
+                      const c = PRIORITY_CFG[p]
+                      return <span className={`text-[10px] font-bold ${c.text} border border-white/[0.08] px-2 py-0.5 rounded-md`}><Star className="w-2.5 h-2.5 inline mr-1" />{c.label}</span>
+                    })()}
+                    {isOverdue(selectedCall) && (
+                      <span className="text-[10px] font-bold text-red-400 border border-red-500/20 bg-red-500/5 px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <AlertCircle className="w-2.5 h-2.5" /> Overdue
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Business Info */}
+                  <section>
+                    <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-2">Business Information</p>
+                    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 space-y-2.5 text-xs">
+                      {([
+                        ['Business', selectedCall.lead?.shop_name],
+                        ['Category', selectedCall.lead?.category],
+                        ['Phone', selectedCall.lead?.phone],
+                        ['Address', selectedCall.lead?.address],
+                        ['Lead Status', selectedCall.lead?.status],
+                      ] as [string, string | undefined][]).map(([k, v]) => v && (
+                        <div key={k} className="flex justify-between gap-4">
+                          <span className="text-zinc-500 font-medium shrink-0">{k}:</span>
+                          <span className="text-white font-semibold text-right">{v}</span>
+                        </div>
+                      ))}
                       {selectedCall.lead?.website && (
-                        <div className="flex justify-between">
-                          <span className="text-zinc-500 font-medium">Website:</span>
-                          <a href={`https://${selectedCall.lead.website}`} target="_blank" rel="noreferrer" className="text-red-400 font-semibold hover:underline inline-flex items-center gap-1">
+                        <div className="flex justify-between gap-4">
+                          <span className="text-zinc-500 font-medium shrink-0">Website:</span>
+                          <a href={`https://${selectedCall.lead.website}`} target="_blank" rel="noreferrer"
+                            className="text-red-400 hover:underline flex items-center gap-1 font-semibold">
                             {selectedCall.lead.website} <ExternalLink className="w-3 h-3" />
                           </a>
                         </div>
                       )}
                     </div>
-                  </div>
+                  </section>
 
-                  {/* Call Parameters */}
-                  <div className="space-y-3.5">
-                    <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Call Summary</h5>
-                    <div className="border border-white/[0.06] bg-white/[0.01] rounded-2xl p-4.5 space-y-3 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-zinc-500 font-medium">Representative:</span>
-                        <span className="text-white font-semibold">{selectedCall.employee?.name || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-500 font-medium">Placed Time:</span>
-                        <span className="text-white">{selectedCall.start_time ? format(new Date(selectedCall.start_time), 'yyyy-MM-dd HH:mm:ss') : 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-500 font-medium">Outcome Badge:</span>
-                        <span className="text-white font-bold">{CALL_OUTCOME_LABELS[selectedCall.outcome] || selectedCall.outcome}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-500 font-medium">Duration:</span>
-                        <span className="text-white font-mono">{formatDurationText(selectedCall.duration_seconds)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-500 font-medium">Call Direction:</span>
-                        <span className="text-white uppercase font-bold text-[10px] tracking-wider text-red-400">{selectedCall.direction || 'outgoing'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-500 font-medium">Log Status:</span>
-                        <span className="text-white font-bold">{selectedCall.status || 'completed'}</span>
-                      </div>
+                  {/* Call Summary */}
+                  <section>
+                    <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-2">Call Summary</p>
+                    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 space-y-2.5 text-xs">
+                      {([
+                        ['Employee', selectedCall.employee?.name],
+                        ['Start Time', selectedCall.start_time ? format(parseISO(selectedCall.start_time), 'yyyy-MM-dd HH:mm:ss') : '—'],
+                        ['End Time', selectedCall.end_time ? format(parseISO(selectedCall.end_time), 'HH:mm:ss') : '—'],
+                        ['Duration', fmtDur(selectedCall.duration_seconds)],
+                        ['Direction', selectedCall.direction ?? 'outgoing'],
+                        ['Status', selectedCall.status ?? 'completed'],
+                      ] as [string, string][]).map(([k, v]) => (
+                        <div key={k} className="flex justify-between gap-4">
+                          <span className="text-zinc-500 font-medium shrink-0">{k}:</span>
+                          <span className="text-white font-semibold capitalize">{v}</span>
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  </section>
 
-                  {/* Lead Assignment */}
-                  <div className="space-y-3.5">
-                    <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Assigned representative</h5>
-                    <div className="border border-white/[0.06] bg-white/[0.01] rounded-2xl p-4.5 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-zinc-500" />
-                        <span className="text-xs text-white font-semibold">
-                          {selectedCall.lead?.assigned_employee?.name || 'Unassigned'}
-                        </span>
-                      </div>
-
-                      <select
-                        value={editingAssignee}
-                        onChange={(e) => {
-                          setEditingAssignee(e.target.value)
-                          handleAssignEmployee(e.target.value)
-                        }}
-                        className="bg-transparent border border-white/[0.08] rounded-lg text-xs py-1 px-2 text-white outline-none focus:border-red-500"
-                      >
-                        <option value="">Choose Rep</option>
-                        {employees.map((emp) => (
-                          <option key={emp.id} value={emp.id}>{emp.name}</option>
+                  {/* Tags */}
+                  <section>
+                    <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-2">Tags</p>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {(selectedCall.tags ?? []).length === 0
+                        ? <p className="text-[11px] text-zinc-600">No tags</p>
+                        : (selectedCall.tags ?? []).map(t => (
+                          <span key={t} className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/[0.03] border border-white/[0.08] rounded-md text-[10px] text-zinc-300 font-semibold">
+                            <Tag className="w-2.5 h-2.5 text-zinc-500" /> {t}
+                          </span>
                         ))}
+                    </div>
+                    <input
+                      value={tagInput}
+                      onChange={e => setTagInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && tagInput.trim()) {
+                          const newTags = [...(selectedCall.tags ?? []), tagInput.trim()]
+                          setSelectedCall(prev => prev ? { ...prev, tags: newTags } : null)
+                          setTagInput('')
+                        }
+                      }}
+                      placeholder="Type tag + Enter"
+                      className="w-full h-8 px-2.5 bg-white/[0.02] border border-white/[0.08] rounded-lg text-xs text-white placeholder-zinc-600 outline-none focus:border-red-500/60"
+                    />
+                  </section>
+
+                  {/* Assign Manager */}
+                  <section>
+                    <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-2">Assigned Manager</p>
+                    <div className="flex items-center gap-3 bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">
+                      <div className="w-8 h-8 rounded-full bg-red-500/10 text-red-400 border border-red-500/15 flex items-center justify-center text-xs font-bold shrink-0">
+                        {selectedCall.lead?.assigned_employee?.name?.[0] ?? '?'}
+                      </div>
+                      <span className="text-xs text-white font-semibold flex-1">{selectedCall.lead?.assigned_employee?.name ?? 'Unassigned'}</span>
+                      <select onChange={e => handleAssign(e.target.value)} defaultValue=""
+                        className="bg-transparent border border-white/[0.08] rounded-lg text-[11px] py-1 px-2 text-white outline-none focus:border-red-500/60">
+                        <option value="">Reassign…</option>
+                        {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
                       </select>
                     </div>
-                  </div>
+                  </section>
 
-                  {/* Future-Ready Audio Recordings & Voice Notes Players */}
-                  <div className="space-y-3.5">
-                    <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Call Recordings (Future-Ready)</h5>
-                    <div className="border border-white/[0.06] bg-white/[0.01] rounded-2xl p-4.5 space-y-4">
-                      
-                      {/* Call Recording */}
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                          <span className="flex items-center gap-1.5"><Volume2 className="w-3.5 h-3.5" /> Call Audio Recording</span>
-                          <span className="text-zinc-600 font-mono">03:42</span>
-                        </div>
-                        <div className="flex items-center gap-3 bg-white/[0.02] border border-white/[0.06] p-2.5 rounded-xl">
-                          <button
-                            onClick={() => setIsPlayingRecording(!isPlayingRecording)}
-                            className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center border border-red-500/15 transition-all"
-                          >
-                            {isPlayingRecording ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-                          </button>
-                          
-                          {/* Seek bar track */}
-                          <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden relative">
-                            <div className="absolute top-0 left-0 bottom-0 bg-red-400 transition-all duration-300" style={{ width: isPlayingRecording ? '45%' : '0%' }} />
-                          </div>
-
-                          <button
-                            onClick={() => toast.info('Downloading call recording file...')}
-                            className="w-7 h-7 bg-white/[0.02] border border-white/[0.08] hover:border-white/12 text-zinc-400 hover:text-white rounded-lg flex items-center justify-center transition-all"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Employee Voice Note */}
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                          <span className="flex items-center gap-1.5"><Volume2 className="w-3.5 h-3.5" /> Uploaded Voice Memo</span>
-                          <span className="text-zinc-600 font-mono">00:45</span>
-                        </div>
-                        <div className="flex items-center gap-3 bg-white/[0.02] border border-white/[0.06] p-2.5 rounded-xl">
-                          <button
-                            onClick={() => setIsPlayingVoiceNote(!isPlayingVoiceNote)}
-                            className="w-8 h-8 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center border border-red-500/15 transition-all"
-                          >
-                            {isPlayingVoiceNote ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-                          </button>
-                          
-                          {/* Seek bar track */}
-                          <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden relative">
-                            <div className="absolute top-0 left-0 bottom-0 bg-red-400 transition-all duration-300" style={{ width: isPlayingVoiceNote ? '15%' : '0%' }} />
-                          </div>
-
-                          <button
-                            onClick={() => toast.info('Voice memo player downloading file...')}
-                            className="w-7 h-7 bg-white/[0.02] border border-white/[0.08] hover:border-white/12 text-zinc-400 hover:text-white rounded-lg flex items-center justify-center transition-all"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-
-                    </div>
-                  </div>
+                  {/* Recordings */}
+                  <section>
+                    <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-2">Call Recording</p>
+                    <AudioPlayer label="Call Recording" duration="03:42" />
+                  </section>
+                  <section>
+                    <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-2">Voice Note</p>
+                    <AudioPlayer label="Voice Memo" duration="00:45" />
+                  </section>
                 </div>
               )}
 
-              {/* Tab 2: Notes */}
+              {/* ── NOTES ────────────────────────────── */}
               {drawerTab === 'notes' && (
-                <div className="space-y-4">
-                  <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Rich Call Notes</h5>
-                  <div className="border border-white/[0.06] bg-white/[0.01] rounded-2xl p-4.5 space-y-4.5">
-                    <textarea
-                      rows={8}
-                      value={editingNotes}
-                      onChange={(e) => setEditingNotes(e.target.value)}
-                      placeholder="Add rich details about this call (e.g. customer questions, package pricing discussed, meeting details)..."
-                      className="w-full bg-white/[0.02] border border-white/[0.08] focus:border-red-500 text-xs rounded-xl p-3 text-white placeholder-zinc-500 outline-none focus:ring-1 focus:ring-red-500 transition-all"
-                    />
+                <div className="p-5 space-y-4">
+                  <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Call Notes</p>
+                  <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl p-3 flex gap-2 text-xs text-zinc-400">
+                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <p>Saving notes will log an entry on this lead's activity timeline.</p>
+                  </div>
+                  <textarea
+                    rows={11}
+                    value={notesEdit}
+                    onChange={e => setNotesEdit(e.target.value)}
+                    placeholder={"• Customer asked about Premium website package\n• Interested in 5-page design\n• Call back Friday after 3 PM\n• Follow up on pricing quote"}
+                    className="w-full bg-white/[0.02] border border-white/[0.08] focus:border-red-500/60 rounded-xl p-4 text-xs text-white placeholder-zinc-700 outline-none resize-none transition-colors leading-relaxed"
+                  />
+                  <button onClick={handleSaveNotes}
+                    disabled={savingNotes || notesEdit === (selectedCall.notes ?? '')}
+                    className="w-full flex items-center justify-center gap-2 h-11 bg-red-500 hover:bg-red-600 disabled:opacity-40 text-white text-xs font-bold rounded-xl transition-all">
+                    {savingNotes ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    {savingNotes ? 'Saving…' : 'Save Notes'}
+                  </button>
+                </div>
+              )}
 
-                    <button
-                      onClick={handleSaveNotes}
-                      disabled={isSavingNotes || editingNotes === (selectedCall.notes || '')}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:hover:bg-red-500 text-white text-xs font-bold rounded-xl transition-all shadow-md h-11"
-                    >
-                      <Save className="w-4 h-4 text-white" />
-                      <span>{isSavingNotes ? 'Saving...' : 'Save Updated Notes'}</span>
+              {/* ── TIMELINE ─────────────────────────── */}
+              {drawerTab === 'timeline' && (
+                <div className="p-5 space-y-5">
+                  {/* This Call Events */}
+                  <div>
+                    <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-3">This Call</p>
+                    <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 space-y-3">
+                      {[
+                        { time: selectedCall.start_time, label: 'Call Started', color: 'bg-blue-500/20 text-blue-400', icon: <Phone className="w-3 h-3" /> },
+                        ...(selectedCall.end_time ? [{ time: selectedCall.end_time, label: 'Call Ended', color: 'bg-zinc-700 text-zinc-400', icon: <PhoneOff className="w-3 h-3" /> }] : []),
+                        ...(selectedCall.notes ? [{ time: selectedCall.created_at, label: 'Notes Added', color: 'bg-amber-500/20 text-amber-400', icon: <Edit3 className="w-3 h-3" /> }] : []),
+                        ...(selectedCall.follow_up && selectedCall.follow_up_date ? [{ time: selectedCall.follow_up_date, label: `Follow-up: ${selectedCall.follow_up_date}`, color: 'bg-purple-500/20 text-purple-400', icon: <CalendarClock className="w-3 h-3" /> }] : []),
+                      ].map((ev, i) => (
+                        <div key={i} className="flex items-start gap-2.5 text-xs">
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${ev.color}`}>{ev.icon}</div>
+                          <div>
+                            <p className="text-white font-semibold">{ev.label}</p>
+                            <p className="text-[10px] font-mono text-zinc-500">{ev.time ? format(parseISO(ev.time), 'hh:mm a') : ''}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Schedule Follow-up */}
+                  <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 space-y-3">
+                    <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Schedule Follow-up</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input type="date" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)}
+                        className="h-9 px-2.5 bg-white/[0.02] border border-white/[0.08] rounded-lg text-xs text-white outline-none focus:border-red-500/60" />
+                      <input type="time" value={followUpTime} onChange={e => setFollowUpTime(e.target.value)}
+                        className="h-9 px-2.5 bg-white/[0.02] border border-white/[0.08] rounded-lg text-xs text-white outline-none focus:border-red-500/60" />
+                    </div>
+                    <button onClick={handleSaveFollowUp} disabled={!followUpDate || savingFollowUp}
+                      className="w-full h-9 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 text-xs font-bold rounded-xl transition-all disabled:opacity-40">
+                      {savingFollowUp ? 'Scheduling…' : 'Schedule Follow-up'}
                     </button>
                   </div>
 
-                  <div className="p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-2xl flex items-start gap-2.5 text-zinc-400 text-xs leading-relaxed">
-                    <AlertCircle className="w-4.5 h-4.5 text-amber-500 shrink-0 mt-0.5" />
-                    <p>
-                      Editing these notes will update this call record's database entries and append a log statement to the customer's permanent pipeline timeline feed.
-                    </p>
+                  {/* Lead Activity Feed */}
+                  <div>
+                    <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-3">Lead Activity Feed</p>
+                    {activities.length === 0
+                      ? <p className="text-xs text-zinc-600 text-center py-4">No activity yet</p>
+                      : activities.map(act => <TimelineItem key={act.id} act={act} />)}
                   </div>
                 </div>
               )}
 
-              {/* Tab 3: Timeline */}
-              {drawerTab === 'timeline' && (
-                <div className="space-y-4.5">
-                  <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Lead Activity Timeline</h5>
-                  {activities.length === 0 ? (
-                    <p className="text-zinc-500 text-xs text-center py-6">No activity records logged for this lead.</p>
-                  ) : (
-                    <div className="relative pl-6 border-l border-white/[0.06] space-y-6 ml-2.5 pt-2">
-                      {activities.map((act) => (
-                        <div key={act.id} className="relative space-y-1">
-                          {/* Dot indicator */}
-                          <span className={`absolute -left-[31px] top-0.5 w-4.5 h-4.5 rounded-full border border-[#0a0a0a] flex items-center justify-center text-white ${
-                            act.type === 'call' ? 'bg-red-400' :
-                            act.type === 'note' ? 'bg-amber-400' :
-                            act.type === 'converted' ? 'bg-emerald-400' :
-                            'bg-zinc-500'
-                          }`}>
-                            <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                          </span>
-
-                          <div className="flex items-center justify-between text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
-                            <span>{act.type} Logged</span>
-                            <span>{act.created_at ? format(new Date(act.created_at), 'yyyy-MM-dd') : ''}</span>
-                          </div>
-                          <p className="text-xs text-white leading-relaxed">{act.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Tab 4: Previous Calls */}
+              {/* ── HISTORY ──────────────────────────── */}
               {drawerTab === 'history' && (
-                <div className="space-y-4.5">
-                  <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Historical Logs</h5>
-                  <div className="space-y-3">
-                    {calls
-                      .filter((c) => c.lead_id === selectedCall.lead_id && c.id !== selectedCall.id)
-                      .map((c) => (
-                        <div key={c.id} className="border border-white/[0.06] bg-white/[0.01] rounded-2xl p-4 space-y-2 text-xs">
-                          <div className="flex justify-between items-center">
-                            <span className="text-white font-bold">
-                              {c.start_time ? format(new Date(c.start_time), 'yyyy-MM-dd HH:mm') : ''}
-                            </span>
-                            <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">
-                              {CALL_OUTCOME_LABELS[c.outcome] || c.outcome}
-                            </span>
-                          </div>
-                          {c.notes && <p className="text-zinc-400 leading-relaxed">{c.notes}</p>}
+                <div className="p-5 space-y-4">
+                  <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Previous Calls — {selectedCall.lead?.shop_name}</p>
+                  {leadCalls.length === 0
+                    ? <p className="text-xs text-zinc-600 text-center py-8">No other calls for this client</p>
+                    : leadCalls.map(c => (
+                      <div key={c.id} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-white">{fmtDate(c.start_time)}</span>
+                          <OutcomeBadge outcome={c.outcome} />
                         </div>
-                      ))}
-                    
-                    {calls.filter((c) => c.lead_id === selectedCall.lead_id && c.id !== selectedCall.id).length === 0 && (
-                      <p className="text-zinc-500 text-xs text-center py-6">No other historical calls logged for this client.</p>
-                    )}
-                  </div>
+                        <div className="flex items-center gap-3 text-[10px] text-zinc-500">
+                          <span><Clock className="w-3 h-3 inline mr-1" />{fmtDur(c.duration_seconds)}</span>
+                          <span><User className="w-3 h-3 inline mr-1" />{c.employee?.name ?? '—'}</span>
+                        </div>
+                        {c.notes && <p className="text-xs text-zinc-400 leading-relaxed border-t border-white/[0.05] pt-2">{c.notes}</p>}
+                      </div>
+                    ))}
                 </div>
               )}
-
             </div>
 
-            {/* Quick Actions Drawer Footer */}
-            <div className="p-6 border-t border-white/[0.08] bg-white/[0.01] space-y-4.5">
-              <h5 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Client Quick Actions</h5>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <button
-                  onClick={() => {
-                    setIsDrawerOpen(false)
-                    navigate(`/call-center?leadId=${selectedCall.lead_id}`)
-                  }}
-                  className="flex flex-col items-center justify-center p-2.5 border border-white/[0.08] bg-white/[0.01] hover:border-red-500/30 rounded-xl text-center text-[10px] font-bold text-white hover:bg-red-500/5 transition-all gap-1"
-                >
-                  <Phone className="w-4 h-4 text-red-400" />
-                  <span>Call Again</span>
-                </button>
-
-                <a
-                  href={`https://wa.me/${selectedCall.lead?.phone.replace(/[^0-9]/g, '')}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex flex-col items-center justify-center p-2.5 border border-white/[0.08] bg-white/[0.01] hover:border-emerald-500/30 rounded-xl text-center text-[10px] font-bold text-white hover:bg-emerald-500/5 transition-all gap-1"
-                >
-                  <MessageSquare className="w-4 h-4 text-emerald-400" />
-                  <span>WhatsApp</span>
-                </a>
-
-                {selectedCall.lead?.phone && (
-                  <a
-                    href={`tel:${selectedCall.lead.phone}`}
-                    className="flex flex-col items-center justify-center p-2.5 border border-white/[0.08] bg-white/[0.01] hover:border-blue-500/30 rounded-xl text-center text-[10px] font-bold text-white hover:bg-blue-500/5 transition-all gap-1"
-                  >
-                    <Mail className="w-4 h-4 text-blue-400" />
-                    <span>Dial Phone</span>
-                  </a>
-                )}
-
-                {selectedCall.lead?.address && (
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedCall.lead.address)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex flex-col items-center justify-center p-2.5 border border-white/[0.08] bg-white/[0.01] hover:border-amber-500/30 rounded-xl text-center text-[10px] font-bold text-white hover:bg-amber-500/5 transition-all gap-1"
-                  >
-                    <MapPin className="w-4 h-4 text-amber-400" />
-                    <span>Maps Pin</span>
-                  </a>
-                )}
+            {/* Quick Actions Footer */}
+            <div className="p-4 border-t border-white/[0.07] bg-white/[0.01] shrink-0">
+              <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mb-3">Quick Actions</p>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { label: 'Call Again', icon: <Phone className="w-3.5 h-3.5" />,         color: 'text-red-400 border-red-500/15 hover:bg-red-500/10',         action: () => { setDrawerOpen(false); navigate(`/call-center?leadId=${selectedCall.lead_id}`) } },
+                  { label: 'WhatsApp',   icon: <MessageSquare className="w-3.5 h-3.5" />,  color: 'text-emerald-400 border-emerald-500/15 hover:bg-emerald-500/10', action: () => window.open(`https://wa.me/${selectedCall.lead?.phone?.replace(/\D/g,'')}`, '_blank') },
+                  { label: 'Website',    icon: <Globe className="w-3.5 h-3.5" />,           color: 'text-sky-400 border-sky-500/15 hover:bg-sky-500/10',         action: () => selectedCall.lead?.website && window.open(`https://${selectedCall.lead.website}`, '_blank') },
+                  { label: 'Maps',       icon: <MapPin className="w-3.5 h-3.5" />,          color: 'text-amber-400 border-amber-500/15 hover:bg-amber-500/10',   action: () => selectedCall.lead?.address && window.open(`https://maps.google.com/?q=${encodeURIComponent(selectedCall.lead.address)}`, '_blank') },
+                  { label: 'Notes',      icon: <Edit3 className="w-3.5 h-3.5" />,           color: 'text-zinc-400 border-white/[0.08] hover:bg-white/[0.05]',    action: () => setDrawerTab('notes') },
+                  { label: 'Timeline',   icon: <ActivityIcon className="w-3.5 h-3.5" />,   color: 'text-purple-400 border-purple-500/15 hover:bg-purple-500/10', action: () => setDrawerTab('timeline') },
+                  { label: 'Assign',     icon: <Users className="w-3.5 h-3.5" />,           color: 'text-indigo-400 border-indigo-500/15 hover:bg-indigo-500/10', action: () => setDrawerTab('details') },
+                  { label: 'Delete',     icon: <Trash2 className="w-3.5 h-3.5" />,          color: 'text-rose-500 border-rose-500/15 hover:bg-rose-500/10',     action: () => handleDelete(selectedCall.id) },
+                ].map(btn => (
+                  <button key={btn.label} onClick={btn.action}
+                    className={`flex flex-col items-center gap-1 p-2 border rounded-xl text-[9px] font-bold transition-all ${btn.color}`}>
+                    {btn.icon}
+                    <span>{btn.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
-
           </div>
         </div>
       )}
 
+      <style>{`
+        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      `}</style>
     </div>
   )
 }
