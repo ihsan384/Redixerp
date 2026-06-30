@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useAuth } from './AuthContext'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, ArrowRight, Zap } from 'lucide-react'
+import { Activity, ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, Zap } from 'lucide-react'
+import { useAuth } from './AuthContext'
 
 export function LoginPage() {
   const { signIn } = useAuth()
@@ -11,149 +11,146 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault()
     setError('')
     setIsLoading(true)
     const { error: authError } = await signIn(email, password)
-    if (authError) {
-      setError(authError.message)
-    }
+    if (authError) setError(authError.message)
     setIsLoading(false)
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] relative overflow-hidden">
-      {/* Background gradient orbs */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-white/[0.02] rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-white/[0.02] rounded-full blur-3xl" />
-      </div>
+    <main className="relative min-h-screen overflow-hidden p-4 sm:p-6 lg:p-8">
+      <div className="redix-grid absolute inset-0 opacity-35" />
+      <div className="absolute -left-24 -top-32 h-[520px] w-[520px] rounded-full bg-red-500/15 blur-[130px]" />
+      <div className="absolute -bottom-40 right-0 h-[520px] w-[520px] rounded-full bg-red-950/20 blur-[140px]" />
 
-      {/* Grid pattern */}
-      <div
-        className="absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
-          backgroundSize: '60px 60px',
-        }}
-      />
+      <div className="relative mx-auto grid min-h-[calc(100vh-32px)] max-w-[1480px] overflow-hidden rounded-[24px] border border-white/[0.075] bg-[#0b0b0b]/76 shadow-[0_42px_130px_rgba(0,0,0,.62)] backdrop-blur-2xl sm:min-h-[calc(100vh-48px)] lg:min-h-[calc(100vh-64px)] lg:grid-cols-[1.12fr_.88fr]">
+        <section className="relative hidden overflow-hidden border-r border-white/[0.065] p-12 lg:flex lg:flex-col lg:justify-between xl:p-16">
+          <div className="absolute inset-0 bg-[linear-gradient(145deg,rgba(229,57,53,.12),transparent_45%)]" />
+          <div className="absolute bottom-10 right-0 h-72 w-72 rounded-full bg-red-500/10 blur-[100px]" />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="relative z-10 w-full max-w-md mx-4"
-      >
-        {/* Logo */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.4 }}
-          className="text-center mb-10"
-        >
-          <div className="inline-flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
-              <Zap className="w-5 h-5 text-black" />
+          <div className="relative flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-[15px] border border-red-300/30 bg-gradient-to-br from-red-400 to-red-700 shadow-[0_14px_38px_rgba(229,57,53,.3)]">
+              <Zap className="h-5 w-5 fill-white text-white" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-white">
-              REDIX
+            <div>
+              <p className="text-xl font-bold tracking-[-0.045em] text-white">REDIX</p>
+              <p className="text-[9px] font-bold uppercase tracking-[0.19em] text-zinc-600">Business Operating System</p>
+            </div>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="relative max-w-[620px]"
+          >
+            <span className="eyebrow"><Sparkles className="h-3.5 w-3.5" /> Enterprise workspace</span>
+            <h1 className="max-w-[560px] text-[48px] font-bold leading-[1.03] tracking-[-0.055em] text-white xl:text-[58px]">
+              Every lead, call, and payment—one clear system.
             </h1>
-          </div>
-          <p className="text-sm text-[#6b7280] tracking-wide">
-            Sales CRM & ERP System
-          </p>
-        </motion.div>
+            <p className="mt-6 max-w-[530px] text-[16px] leading-7 text-zinc-400">
+              REDIX gives your team a focused command center for pipeline execution, client operations, and financial visibility.
+            </p>
 
-        {/* Login Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.4 }}
-          className="bg-[#111111] border border-[#222222] rounded-2xl p-8"
-        >
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-white mb-1">Welcome back</h2>
-            <p className="text-sm text-[#6b7280]">Sign in to your account to continue</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-xs font-medium text-[#9ca3af] uppercase tracking-wider">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@redix.media"
-                required
-                className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-white text-sm placeholder:text-[#4b5563] focus:outline-none focus:border-[#444444] focus:ring-1 focus:ring-[#444444] transition-colors"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-xs font-medium text-[#9ca3af] uppercase tracking-wider">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  className="w-full px-4 py-3 bg-[#0a0a0a] border border-[#2a2a2a] rounded-xl text-white text-sm placeholder:text-[#4b5563] focus:outline-none focus:border-[#444444] focus:ring-1 focus:ring-[#444444] transition-colors pr-12"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#4b5563] hover:text-white transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+            <div className="mt-10 grid max-w-[560px] grid-cols-2 gap-3">
+              <div className="rounded-[18px] border border-white/[0.075] bg-white/[0.03] p-4">
+                <Activity className="h-5 w-5 text-red-300" />
+                <p className="mt-5 text-sm font-bold text-white">Live operating view</p>
+                <p className="mt-1 text-xs leading-5 text-zinc-600">Pipeline, follow-ups, and finance in sync.</p>
+              </div>
+              <div className="rounded-[18px] border border-white/[0.075] bg-white/[0.03] p-4">
+                <ShieldCheck className="h-5 w-5 text-emerald-300" />
+                <p className="mt-5 text-sm font-bold text-white">Built for focused teams</p>
+                <p className="mt-1 text-xs leading-5 text-zinc-600">Role-aware workflows with reliable context.</p>
               </div>
             </div>
+          </motion.div>
 
-            {error && (
-              <motion.p
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2"
-              >
-                {error}
-              </motion.p>
-            )}
+          <p className="relative text-[11px] text-zinc-700">© {new Date().getFullYear()} REDIX.MEDIA · Secure workspace</p>
+        </section>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3 bg-white text-black font-semibold text-sm rounded-xl hover:bg-gray-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-              ) : (
-                <>
-                  Sign In
-                  <ArrowRight className="w-4 h-4" />
-                </>
+        <section className="flex items-center justify-center p-5 sm:p-10 xl:p-16">
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08, duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
+            className="w-full max-w-[440px]"
+          >
+            <div className="mb-10 flex items-center gap-3 lg:hidden">
+              <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-gradient-to-br from-red-400 to-red-700">
+                <Zap className="h-5 w-5 fill-white text-white" />
+              </div>
+              <p className="text-xl font-bold tracking-[-0.04em] text-white">REDIX</p>
+            </div>
+
+            <div>
+              <span className="eyebrow">Welcome back</span>
+              <h2 className="text-[34px] font-bold tracking-[-0.045em] text-white">Sign in to REDIX</h2>
+              <p className="mt-3 text-sm leading-6 text-zinc-500">Enter your work credentials to continue to the business workspace.</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="mt-9 space-y-5">
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-[13px] font-semibold text-zinc-300">Email address</label>
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@redix.media"
+                  required
+                  className="w-full px-4"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="password" className="text-[13px] font-semibold text-zinc-300">Password</label>
+                  <span className="text-[11px] font-semibold text-zinc-600">Protected access</span>
+                </div>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="Enter your password"
+                    required
+                    className="w-full px-4 pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((current) => !current)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl text-zinc-600 transition hover:bg-white/[0.05] hover:text-white"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} role="alert" className="rounded-[14px] border border-red-400/20 bg-red-500/8 px-4 py-3 text-sm text-red-300">
+                  {error}
+                </motion.p>
               )}
-            </button>
-          </form>
-        </motion.div>
 
-        {/* Footer */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.4 }}
-          className="text-center text-xs text-[#4b5563] mt-8"
-        >
-          Powered by <span className="text-[#6b7280]">REDIX.MEDIA</span>
-        </motion.p>
-      </motion.div>
-    </div>
+              <button type="submit" disabled={isLoading} className="btn-primary w-full">
+                {isLoading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/25 border-t-white" /> : <>Sign in <ArrowRight className="h-4 w-4" /></>}
+              </button>
+            </form>
+
+            <div className="mt-8 flex items-center gap-2 text-xs text-zinc-700">
+              <ShieldCheck className="h-4 w-4" /> Authenticated and encrypted session
+            </div>
+          </motion.div>
+        </section>
+      </div>
+    </main>
   )
 }

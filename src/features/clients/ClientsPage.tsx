@@ -98,10 +98,11 @@ function RecordRevenueModal({ isOpen, onClose, client, onSave }: RecordRevenueMo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div onClick={onClose} className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
+      <div onClick={onClose} className="modal-backdrop" />
       <form
         onSubmit={handleSubmit}
-        className="relative w-full max-w-md bg-[#0d0d0d] border border-[#1f1f1f] rounded-2xl p-6 shadow-2xl z-10 space-y-4"
+        aria-label="Record client payment"
+        className="modal-panel z-10 w-full max-w-md space-y-4 p-6"
       >
         <div className="flex items-center justify-between border-b border-[#1f1f1f] pb-3">
           <h3 className="text-sm font-semibold text-white">Record Invoice / Payment</h3>
@@ -233,7 +234,7 @@ export function ClientsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell page-stack">
       {/* KPI Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Total Converted Clients */}
@@ -292,7 +293,7 @@ export function ClientsPage() {
               return (
                 <div
                   key={client.id}
-                  className="bg-[#0d0d0d] border border-[#1f1f1f] rounded-2xl p-5 hover:border-white/10 transition-colors flex flex-col justify-between space-y-4"
+                className="surface-card flex flex-col justify-between space-y-4"
                 >
                   <div>
                     <div className="flex items-start justify-between">

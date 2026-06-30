@@ -95,10 +95,11 @@ function AddExpenseModal({ isOpen, onClose, onSave }: AddExpenseModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div onClick={onClose} className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
+      <div onClick={onClose} className="modal-backdrop" />
       <form
         onSubmit={handleSubmit}
-        className="relative w-full max-w-md bg-[#0d0d0d] border border-[#1f1f1f] rounded-2xl p-6 shadow-2xl z-10 space-y-4"
+        aria-label="Record new expense"
+        className="modal-panel z-10 w-full max-w-md space-y-4 p-6"
       >
         <div className="flex items-center justify-between border-b border-[#1f1f1f] pb-3">
           <h3 className="text-sm font-semibold text-white">Log Expense Outflow</h3>
@@ -268,9 +269,9 @@ export function ExpensesPage() {
   const trendChartData = aggregateMonthlyExpenses()
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell page-stack">
       {/* Header Row */}
-      <div className="flex items-center justify-between p-4 bg-[#111111]/30 border border-[#1f1f1f] rounded-2xl">
+      <div className="panel-card flex flex-col items-start justify-between gap-4 p-5 sm:flex-row sm:items-center">
         <div className="flex items-center gap-3">
           <Receipt className="w-5 h-5 text-white" />
           <div>
@@ -280,7 +281,7 @@ export function ExpensesPage() {
         </div>
         <button
           onClick={() => setIsAddOpen(true)}
-          className="flex items-center gap-1.5 px-3.5 py-2 bg-white text-black text-xs font-bold rounded-xl hover:bg-neutral-200 transition-all"
+          className="btn-primary px-4 text-xs"
         >
           <Plus className="w-3.5 h-3.5" /> Log Expense
         </button>
@@ -403,7 +404,7 @@ export function ExpensesPage() {
       )}
 
       {/* Ledger Table List */}
-      <div className="border border-[#1f1f1f] bg-[#0d0d0d] rounded-2xl overflow-hidden">
+      <div className="table-shell">
         <div className="px-5 py-4 border-b border-[#1f1f1f] flex items-center justify-between">
           <h4 className="text-xs font-bold text-white uppercase tracking-wider">Outlay Billing Journals</h4>
         </div>

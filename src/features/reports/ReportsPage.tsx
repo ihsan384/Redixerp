@@ -203,9 +203,9 @@ export function ReportsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell page-stack">
       {/* Header Info */}
-      <div className="flex items-center gap-3 p-4 bg-[#111111]/30 border border-[#1f1f1f] rounded-2xl">
+      <div className="panel-card flex items-center gap-3 p-5">
         <BarChart3 className="w-5 h-5 text-white" />
         <div>
           <p className="text-sm font-semibold text-white">REDIX Intelligence & Reports Center</p>

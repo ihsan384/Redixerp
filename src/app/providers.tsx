@@ -21,10 +21,12 @@ export function Providers({ children }: ProvidersProps) {
             richColors
             toastOptions={{
               style: {
-                background: '#111111',
-                border: '1px solid #222222',
-                color: '#f5f5f5',
-                borderRadius: '12px',
+                background: 'rgba(17, 17, 17, .96)',
+                border: '1px solid rgba(255,255,255,.1)',
+                color: '#ffffff',
+                borderRadius: '16px',
+                fontFamily: 'Satoshi, Inter, sans-serif',
+                boxShadow: '0 24px 64px rgba(0,0,0,.48)',
               },
             }}
           />

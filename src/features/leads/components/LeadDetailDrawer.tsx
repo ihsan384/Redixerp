@@ -115,7 +115,7 @@ export function LeadDetailDrawer({ isOpen, onClose, lead }: LeadDetailDrawerProp
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            className="modal-backdrop"
           />
 
           {/* Sheet container */}
@@ -125,7 +125,10 @@ export function LeadDetailDrawer({ isOpen, onClose, lead }: LeadDetailDrawerProp
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="w-screen max-w-lg bg-[#0d0d0d] border-l border-[#1f1f1f] text-white flex flex-col h-full shadow-2xl"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Lead details"
+              className="flex h-full w-screen max-w-lg flex-col border-l border-white/10 bg-[#0d0d0d] text-white shadow-2xl"
             >
               {/* Header */}
               <div className="px-6 py-4 border-b border-[#1f1f1f] flex items-center justify-between flex-shrink-0">

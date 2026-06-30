@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   List,
   Grid,
+  LayoutPanelTop,
   Search,
   Plus,
   Upload,
@@ -16,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
+import { PageHeader } from '@/components/ui/Primitives'
 import { useLeads } from './hooks/useLeads'
 import { Storage } from '@/lib/storage'
 import { LEAD_CATEGORIES, LEAD_STATUS_LABELS } from '@/utils/constants'
@@ -38,7 +40,7 @@ export function LeadsPage() {
   const [assignedTo, setAssignedTo] = useState('all')
 
   // View & UI States
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table')
+  const [viewMode, setViewMode] = useState<'table' | 'grid' | 'kanban'>('table')
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([])
   const [page, setPage] = useState(1)
   const pageSize = 12
@@ -148,10 +150,24 @@ export function LeadsPage() {
     navigate(`/call-center?leadId=${leadId}`)
   }
 
+  const kanbanColumns = [
+    { id: 'queue', label: 'Queued', color: 'bg-blue-400', statuses: ['new', 'called', 'no_answer', 'busy', 'call_later', 'owner_not_available'] },
+    { id: 'qualified', label: 'Qualified', color: 'bg-emerald-400', statuses: ['interested'] },
+    { id: 'meeting', label: 'Meeting', color: 'bg-violet-400', statuses: ['meeting_scheduled'] },
+    { id: 'won', label: 'Won', color: 'bg-red-400', statuses: ['converted'] },
+    { id: 'closed', label: 'Closed', color: 'bg-zinc-500', statuses: ['not_interested', 'lost', 'wrong_number', 'already_has_website'] },
+  ]
+
   return (
-    <div className="space-y-6">
+    <div className="page-shell page-stack">
+      <PageHeader
+        eyebrow="Pipeline"
+        title="Leads"
+        description="Qualify prospects, coordinate ownership, and move every opportunity toward its next best action."
+      />
+
       {/* Top Action Bar */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-[#111111]/30 border border-[#1f1f1f] p-4 rounded-2xl">
+      <div className="panel-card flex flex-col justify-between gap-4 p-4 2xl:flex-row 2xl:items-center">
         {/* Left Side: Search + Filters */}
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="relative">
@@ -242,9 +258,10 @@ export function LeadsPage() {
           )}
 
           {/* View Toggles */}
-          <div className="flex items-center bg-[#141414] border border-[#1f1f1f] rounded-xl p-1">
+          <div className="segmented-control">
             <button
               onClick={() => setViewMode('table')}
+              aria-label="Table view"
               className={`p-1.5 rounded-lg transition-all ${
                 viewMode === 'table' ? 'bg-white/10 text-white' : 'text-[#636363] hover:text-white'
               }`}
@@ -253,32 +270,42 @@ export function LeadsPage() {
             </button>
             <button
               onClick={() => setViewMode('grid')}
+              aria-label="Grid view"
               className={`p-1.5 rounded-lg transition-all ${
                 viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-[#636363] hover:text-white'
               }`}
             >
               <Grid className="w-3.5 h-3.5" />
             </button>
+            <button
+              onClick={() => setViewMode('kanban')}
+              aria-label="Kanban view"
+              className={`p-1.5 rounded-lg transition-all ${
+                viewMode === 'kanban' ? 'bg-white/10 text-white' : 'text-[#636363] hover:text-white'
+              }`}
+            >
+              <LayoutPanelTop className="w-3.5 h-3.5" />
+            </button>
           </div>
 
           {/* Import / Export */}
           <button
             onClick={() => setIsImportOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 border border-[#1f1f1f] bg-[#141414] hover:border-white/10 rounded-xl text-xs font-semibold text-[#8c8c8c] hover:text-white transition-colors"
+            className="btn-secondary px-3 text-xs"
           >
             <Upload className="w-3.5 h-3.5" /> Import
           </button>
 
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-2 border border-[#1f1f1f] bg-[#141414] hover:border-white/10 rounded-xl text-xs font-semibold text-[#8c8c8c] hover:text-white transition-colors"
+            className="btn-secondary px-3 text-xs"
           >
             <Download className="w-3.5 h-3.5" /> Export
           </button>
 
           <button
             onClick={() => setIsAddOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white text-black hover:bg-neutral-200 rounded-xl text-xs font-bold transition-all"
+            className="btn-primary px-3 text-xs"
           >
             <Plus className="w-3.5 h-3.5" /> Add Lead
           </button>
@@ -299,7 +326,7 @@ export function LeadsPage() {
         </div>
       ) : viewMode === 'table' ? (
         /* PREMIUM TABLE VIEW */
-        <div className="border border-[#1f1f1f] rounded-2xl bg-[#0d0d0d] overflow-hidden">
+        <div className="table-shell">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse sticky-header">
               <thead>
@@ -387,7 +414,7 @@ export function LeadsPage() {
                         )}
                       </td>
                       <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-1 opacity-100 transition-opacity xl:opacity-0 xl:group-hover:opacity-100">
                           <button
                             onClick={() => handleCallRedirect(lead.id)}
                             className="p-1.5 rounded-lg hover:bg-white/5 text-[#8c8c8c] hover:text-white"
@@ -411,7 +438,7 @@ export function LeadsPage() {
             </table>
           </div>
         </div>
-      ) : (
+      ) : viewMode === 'grid' ? (
         /* PREMIUM DETAILED CARD GRID VIEW */
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {paginatedLeads.map((lead) => {
@@ -420,7 +447,7 @@ export function LeadsPage() {
             return (
               <div
                 key={lead.id}
-                className="bg-[#0d0d0d] border border-[#1f1f1f] rounded-2xl p-5 hover:border-white/10 transition-all flex flex-col justify-between space-y-4"
+                className="surface-card flex flex-col justify-between space-y-4"
               >
                 {/* Card Top */}
                 <div className="space-y-2">
@@ -496,6 +523,53 @@ export function LeadsPage() {
               </div>
             )
           })}
+        </div>
+      ) : (
+        <div className="overflow-x-auto pb-2">
+          <div className="grid min-w-[1160px] grid-cols-5 gap-4">
+            {kanbanColumns.map((column) => {
+              const columnLeads = paginatedLeads.filter((lead) => column.statuses.includes(lead.status))
+              return (
+                <section key={column.id} className="panel-card min-h-[430px] p-3">
+                  <div className="flex items-center justify-between border-b border-white/[0.065] px-1 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`h-2 w-2 rounded-full ${column.color}`} />
+                      <h3 className="text-[13px] font-bold text-zinc-200">{column.label}</h3>
+                    </div>
+                    <span className="status-pill min-h-6 px-2 text-zinc-500">{columnLeads.length}</span>
+                  </div>
+                  <div className="mt-3 space-y-2.5">
+                    {columnLeads.map((lead) => {
+                      const employee = employees.find((item) => item.id === lead.assigned_to)
+                      return (
+                        <button
+                          key={lead.id}
+                          onClick={() => setSelectedLeadForDrawer(lead)}
+                          className="w-full rounded-[16px] border border-white/[0.065] bg-white/[0.025] p-3.5 text-left transition hover:-translate-y-0.5 hover:border-white/[0.12] hover:bg-white/[0.04]"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="truncate text-[13px] font-bold text-white">{lead.shop_name}</p>
+                              <p className="mt-0.5 truncate text-[10px] text-zinc-600">{lead.category}</p>
+                            </div>
+                            {lead.rating && <span className="flex items-center gap-1 text-[10px] font-bold text-amber-300"><Star className="h-3 w-3 fill-amber-300" />{lead.rating}</span>}
+                          </div>
+                          <p className="mt-3 line-clamp-2 text-[11px] leading-5 text-zinc-500">{lead.notes || 'No notes recorded.'}</p>
+                          <div className="mt-3 flex items-center justify-between border-t border-white/[0.055] pt-3">
+                            <span className="text-[10px] text-zinc-600">{employee?.name || 'Unassigned'}</span>
+                            <LeadStatusBadge status={lead.status} />
+                          </div>
+                        </button>
+                      )
+                    })}
+                    {columnLeads.length === 0 && (
+                      <div className="rounded-[14px] border border-dashed border-white/[0.07] p-5 text-center text-[11px] text-zinc-700">No leads</div>
+                    )}
+                  </div>
+                </section>
+              )
+            })}
+          </div>
         </div>
       )}
 

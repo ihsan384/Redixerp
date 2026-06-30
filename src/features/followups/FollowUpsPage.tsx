@@ -44,8 +44,8 @@ function RescheduleModal({ isOpen, onClose, call, onSave }: RescheduleModalProps
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div onClick={onClose} className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
-      <div className="relative w-full max-w-md bg-[#0d0d0d] border border-[#1f1f1f] rounded-2xl p-6 shadow-2xl z-10 space-y-4">
+      <div onClick={onClose} className="modal-backdrop" />
+      <div role="dialog" aria-modal="true" aria-label="Reschedule follow-up" className="modal-panel z-10 w-full max-w-md space-y-4 p-6">
         <div className="flex items-center justify-between border-b border-[#1f1f1f] pb-3">
           <h3 className="text-sm font-semibold text-white">Reschedule Follow-Up</h3>
           <button onClick={onClose} className="p-1 rounded hover:bg-white/5 text-[#8c8c8c]">
@@ -342,9 +342,9 @@ export function FollowUpsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="page-shell page-stack">
       {/* Header Info */}
-      <div className="flex items-center gap-3 p-4 bg-[#111111]/30 border border-[#1f1f1f] rounded-2xl">
+      <div className="panel-card flex items-center gap-3 p-5">
         <CalendarClock className="w-5 h-5 text-white" />
         <div>
           <p className="text-sm font-semibold text-white">Call Follow-Up Planner</p>

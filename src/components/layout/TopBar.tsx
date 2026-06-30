@@ -1,11 +1,21 @@
-import { useState, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
-import { Search, Bell, Command } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import {
+  Bell,
+  ChevronRight,
+  Clock3,
+  Command,
+  Menu,
+  Moon,
+  Plus,
+  Search,
+  Sun,
+} from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { SearchDialog } from './SearchDialog'
 
 const PAGE_TITLES: Record<string, string> = {
-  '/': 'Dashboard',
+  '/': 'Overview',
   '/leads': 'Leads',
   '/call-center': 'Call Center',
   '/follow-ups': 'Follow Ups',
@@ -17,69 +27,111 @@ const PAGE_TITLES: Record<string, string> = {
   '/settings': 'Settings',
 }
 
-export function TopBar() {
+interface TopBarProps {
+  onMenuOpen: () => void
+}
+
+export function TopBar({ onMenuOpen }: TopBarProps) {
   const location = useLocation()
+  const navigate = useNavigate()
   const { employee } = useAuth()
   const [searchOpen, setSearchOpen] = useState(false)
+  const [clock, setClock] = useState(new Date())
+  const [midnightTheme, setMidnightTheme] = useState(() => localStorage.getItem('redix_theme') === 'midnight')
 
-  // Listen for global Command+K / Ctrl+K to open
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault()
-        setSearchOpen((prev) => !prev)
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'k' && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault()
+        setSearchOpen((current) => !current)
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  const pageTitle = PAGE_TITLES[location.pathname] || 'REDIX CRM'
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(new Date()), 30_000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    const value = midnightTheme ? 'midnight' : 'dark'
+    document.documentElement.dataset.theme = value
+    localStorage.setItem('redix_theme', value)
+  }, [midnightTheme])
+
+  const pageTitle = PAGE_TITLES[location.pathname] || 'REDIX'
 
   return (
     <>
-      <header className="h-[72px] shrink-0 bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-[#1a1a1a] flex items-center justify-between px-8 sticky top-0 z-30">
-        {/* Left: Page Title */}
-        <div>
-          <h1 className="text-lg font-semibold text-white">{pageTitle}</h1>
-          <p className="text-xs text-[#4b5563]">
-            {new Date().toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </p>
+      <header className="relative z-30 flex min-h-[80px] shrink-0 items-center justify-between gap-4 border-b border-white/[0.065] bg-[#090909]/72 px-4 backdrop-blur-2xl sm:px-6 xl:px-8">
+        <div className="flex min-w-0 items-center gap-3">
+          <button onClick={onMenuOpen} aria-label="Open navigation" className="flex h-11 w-11 items-center justify-center rounded-[14px] border border-white/[0.075] bg-white/[0.035] text-zinc-500 lg:hidden">
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="min-w-0">
+            <div className="hidden items-center gap-1.5 text-[10px] font-semibold text-zinc-600 sm:flex">
+              <span>Workspace</span>
+              <ChevronRight className="h-3 w-3" />
+              <span className="text-zinc-400">{pageTitle}</span>
+            </div>
+            <h1 className="truncate text-[17px] font-bold tracking-[-0.03em] text-white sm:mt-0.5 sm:text-lg">{pageTitle}</h1>
+          </div>
         </div>
 
-        {/* Right: Search, Notifications, Profile */}
-        <div className="flex items-center gap-3">
-          {/* Search */}
+        <div className="flex items-center gap-2">
+          <div className="mr-1 hidden items-center gap-2 rounded-[13px] border border-white/[0.065] bg-white/[0.025] px-3 py-2 text-[11px] text-zinc-500 2xl:flex">
+            <Clock3 className="h-3.5 w-3.5" />
+            <span className="font-semibold tabular-nums text-zinc-300">
+              {clock.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+
           <button
             onClick={() => setSearchOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#111111] border border-[#222222] rounded-xl text-[#6b7280] text-sm hover:border-[#333333] hover:text-[#9ca3af] transition-colors"
+            aria-label="Open global search"
+            className="flex h-11 items-center gap-2 rounded-[14px] border border-white/[0.075] bg-white/[0.035] px-3 text-zinc-500 transition hover:border-white/[0.13] hover:bg-white/[0.055] hover:text-zinc-200 sm:min-w-[210px] sm:px-4"
           >
-            <Search className="w-4 h-4" />
-            <span className="hidden lg:inline">Search...</span>
-            <kbd className="hidden lg:flex items-center gap-0.5 px-1.5 py-0.5 bg-[#1a1a1a] rounded text-[10px] text-[#4b5563] font-mono border border-[#2a2a2a]">
-              <Command className="w-2.5 h-2.5" />K
+            <Search className="h-4 w-4 shrink-0" />
+            <span className="hidden flex-1 text-left text-[13px] sm:block">Search workspace</span>
+            <kbd className="hidden items-center gap-0.5 rounded-md border border-white/[0.07] bg-black/25 px-1.5 py-0.5 font-mono text-[9px] text-zinc-600 md:flex">
+              <Command className="h-2.5 w-2.5" />K
             </kbd>
           </button>
 
-          {/* Notifications */}
-          <button className="relative w-9 h-9 flex items-center justify-center rounded-xl bg-[#111111] border border-[#222222] text-[#6b7280] hover:border-[#333333] hover:text-white transition-colors">
-            <Bell className="w-4 h-4" />
-            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0a0a0a]" />
+          <div className="hidden xl:block">
+            <button
+              onClick={() => navigate('/leads')}
+              className="btn-primary px-3"
+              aria-label="Open leads to add a new lead"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden 2xl:inline">New lead</span>
+            </button>
+          </div>
+
+          <div className="hidden sm:block">
+            <button
+              onClick={() => setMidnightTheme((current) => !current)}
+              aria-label="Toggle ambient theme"
+              title="Toggle ambient theme"
+              className="icon-btn"
+            >
+              {midnightTheme ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
+          </div>
+
+          <button aria-label="Notifications" title="Notifications" className="icon-btn relative">
+            <Bell className="h-4 w-4" />
+            <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full border-2 border-[#111] bg-red-400 shadow-[0_0_9px_rgba(229,57,53,.7)]" />
           </button>
 
-          {/* Profile */}
-          <div className="flex items-center gap-3 pl-3 border-l border-[#1a1a1a]">
-            <div className="w-8 h-8 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-white text-xs font-semibold border border-[#2a2a2a]">
-              {employee?.name?.charAt(0)?.toUpperCase() || 'U'}
-            </div>
-            <div className="hidden lg:block">
-              <p className="text-sm font-medium text-white leading-none">{employee?.name || 'User'}</p>
-              <p className="text-xs text-[#4b5563] mt-0.5 capitalize">{employee?.role?.replace('_', ' ') || 'Admin'}</p>
+          <div className="ml-1 hidden items-center gap-3 border-l border-white/[0.065] pl-3 md:flex">
+            <div className="avatar">{employee?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
+            <div className="hidden min-w-0 xl:block">
+              <p className="truncate text-[13px] font-bold leading-none text-white">{employee?.name || 'User'}</p>
+              <p className="mt-1 truncate text-[10px] capitalize text-zinc-600">{employee?.role?.replace('_', ' ') || 'Admin'}</p>
             </div>
           </div>
         </div>

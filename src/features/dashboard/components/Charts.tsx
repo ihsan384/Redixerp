@@ -30,9 +30,9 @@ interface RevenueChartProps {
 const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-2 shadow-2xl">
-        <p className="text-xs text-[#6b7280]">{label}</p>
-        <p className="text-sm font-semibold text-white">{payload[0].value.toLocaleString()}</p>
+      <div className="rounded-xl border border-white/10 bg-[#171717]/95 px-3 py-2 shadow-2xl backdrop-blur-xl">
+        <p className="text-xs text-zinc-500">{label}</p>
+        <p className="text-sm font-bold text-white">{payload[0].value.toLocaleString()}</p>
       </div>
     )
   }
@@ -69,17 +69,17 @@ export function DailyCallsChart({ calls }: DailyCallsChartProps) {
     >
       <Card className="h-full flex flex-col justify-between">
         <CardHeader>
-          <CardTitle>Daily Calls</CardTitle>
-          <CardDescription>Calls made grouped by day</CardDescription>
+          <CardTitle>Daily call volume</CardTitle>
+          <CardDescription>Outbound activity across the current week</CardDescription>
         </CardHeader>
         <CardContent className="h-[320px] w-full flex-1 min-h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} barSize={32}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" vertical={false} />
-              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#4b5563', fontSize: 11 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#4b5563', fontSize: 11 }} />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
-              <Bar dataKey="calls" fill="rgba(255,255,255,0.8)" radius={[6, 6, 0, 0]} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.055)" vertical={false} />
+              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#71717a', fontSize: 11 }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#71717a', fontSize: 11 }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(229,57,53,.035)' }} />
+              <Bar dataKey="calls" fill="#e53935" radius={[7, 7, 2, 2]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -114,17 +114,17 @@ export function ConversionChart({ leads }: ConversionChartProps) {
     >
       <Card className="h-full flex flex-col justify-between">
         <CardHeader>
-          <CardTitle>Conversion Rate</CardTitle>
-          <CardDescription>Lead-to-client conversion percentage</CardDescription>
+          <CardTitle>Conversion velocity</CardTitle>
+          <CardDescription>Lead-to-client performance across five pipeline checkpoints</CardDescription>
         </CardHeader>
         <CardContent className="h-[320px] w-full flex-1 min-h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" vertical={false} />
-              <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fill: '#4b5563', fontSize: 11 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#4b5563', fontSize: 11 }} unit="%" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.055)" vertical={false} />
+              <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fill: '#71717a', fontSize: 11 }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#71717a', fontSize: 11 }} unit="%" />
               <Tooltip content={<CustomTooltip />} />
-              <Line type="monotone" dataKey="rate" stroke="#ffffff" strokeWidth={2} dot={{ fill: '#ffffff', r: 4, strokeWidth: 0 }} activeDot={{ r: 6, fill: '#ffffff' }} />
+              <Line type="monotone" dataKey="rate" stroke="#ff625e" strokeWidth={2.5} dot={{ fill: '#e53935', r: 4, strokeWidth: 2, stroke: '#311' }} activeDot={{ r: 6, fill: '#ff625e' }} />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
@@ -135,23 +135,29 @@ export function ConversionChart({ leads }: ConversionChartProps) {
 
 export function RevenueChart({ revenues }: RevenueChartProps) {
   const getRevenueData = () => {
-    const monthlyMap: Record<string, number> = { Jan: 0, Feb: 0, Mar: 0, Apr: 0, May: 0, Jun: 0 }
+    const months = Array.from({ length: 6 }, (_, index) => {
+      const date = new Date()
+      date.setDate(1)
+      date.setMonth(date.getMonth() - (5 - index))
+      return {
+        key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+        label: date.toLocaleString('default', { month: 'short' }),
+      }
+    })
+    const monthlyMap = Object.fromEntries(months.map((month) => [month.key, 0])) as Record<string, number>
+
     revenues.forEach((r) => {
       if (r.received_date) {
-        const [_, m] = r.received_date.split('-')
-        if (m) {
-          const date = new Date(2026, parseInt(m) - 1, 1)
-          const name = date.toLocaleString('default', { month: 'short' })
-          if (monthlyMap[name] !== undefined) {
-            monthlyMap[name] += r.amount
-          }
+        const key = r.received_date.slice(0, 7)
+        if (monthlyMap[key] !== undefined) {
+          monthlyMap[key] += r.amount
         }
       }
     })
 
-    return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month) => ({
-      month,
-      revenue: monthlyMap[month] || 0,
+    return months.map((month) => ({
+      month: month.label,
+      revenue: monthlyMap[month.key] || 0,
     }))
   }
 
@@ -166,23 +172,23 @@ export function RevenueChart({ revenues }: RevenueChartProps) {
     >
       <Card className="h-full flex flex-col justify-between">
         <CardHeader>
-          <CardTitle>Revenue</CardTitle>
-          <CardDescription>Monthly revenue trends</CardDescription>
+          <CardTitle>Revenue performance</CardTitle>
+          <CardDescription>Collected revenue over the last six months</CardDescription>
         </CardHeader>
         <CardContent className="h-[320px] w-full flex-1 min-h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
               <defs>
                 <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#ffffff" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#ffffff" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#e53935" stopOpacity={0.34} />
+                  <stop offset="95%" stopColor="#e53935" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" vertical={false} />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#4b5563', fontSize: 11 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#4b5563', fontSize: 11 }} tickFormatter={(v) => `${v / 1000}k`} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.055)" vertical={false} />
+              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#71717a', fontSize: 11 }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#71717a', fontSize: 11 }} tickFormatter={(v) => `${v / 1000}k`} />
               <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="revenue" stroke="#ffffff" strokeWidth={2} fill="url(#revenueGradient)" />
+              <Area type="monotone" dataKey="revenue" stroke="#ff625e" strokeWidth={2.5} fill="url(#revenueGradient)" />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>

@@ -103,14 +103,17 @@ export function AddLeadModal({ isOpen, onClose }: AddLeadModalProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+            className="modal-backdrop"
           />
 
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 16 }}
-            className="relative w-full max-w-2xl bg-[#0d0d0d] border border-[#1f1f1f] rounded-2xl shadow-2xl overflow-hidden z-10"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Add lead"
+            className="modal-panel z-10 w-full max-w-2xl overflow-hidden"
           >
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f1f1f]">
               <h3 className="text-base font-semibold text-white">Add New Business Lead</h3>

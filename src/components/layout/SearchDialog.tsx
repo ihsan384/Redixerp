@@ -111,16 +111,19 @@ export function SearchDialog({ isOpen, onClose }: SearchDialogProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-[#000000]/80 backdrop-blur-sm"
+            className="modal-backdrop"
           />
 
           {/* Modal Container */}
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Global search"
             initial={{ opacity: 0, scale: 0.97, y: -8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: -8 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="w-full max-w-2xl bg-[#0d0d0d] border border-[#1f1f1f] rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col mx-4"
+            className="modal-panel z-10 mx-4 flex w-full max-w-2xl flex-col overflow-hidden"
           >
             {/* Search Input Area */}
             <div className="relative flex items-center px-4 border-b border-[#1f1f1f] h-14">
