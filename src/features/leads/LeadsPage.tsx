@@ -27,6 +27,7 @@ import { LeadDetailDrawer } from './components/LeadDetailDrawer'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
+import { cn } from '@/utils/cn'
 
 export function LeadsPage() {
   const navigate = useNavigate()
