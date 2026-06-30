@@ -54,9 +54,9 @@ export function Sidebar() {
   return (
     <motion.aside
       initial={false}
-      animate={{ width: collapsed ? 72 : 256 }}
+      animate={{ width: collapsed ? 72 : 240 }}
       transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="h-screen bg-[#0a0a0a] border-r border-[#1a1a1a] flex flex-col fixed left-0 top-0 z-40"
+      className="h-screen bg-[#0a0a0a] border-r border-[#1a1a1a] flex flex-col shrink-0 z-40 relative"
     >
       {/* Logo */}
       <div className="h-16 flex items-center justify-between px-5 border-b border-[#1a1a1a]">

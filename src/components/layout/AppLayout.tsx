@@ -4,15 +4,14 @@ import { TopBar } from './TopBar'
 
 export function AppLayout() {
   return (
-    <div className="flex min-h-screen bg-[#0a0a0a]">
+    <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
-      {/* Main content area — offset by sidebar width */}
-      <div className="flex-1 ml-[256px] transition-all duration-250">
+      <main className="flex-1 overflow-y-auto bg-background flex flex-col">
         <TopBar />
-        <main className="p-8">
+        <div className="flex-1">
           <Outlet />
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   )
 }

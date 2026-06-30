@@ -42,7 +42,7 @@ export function CallCenterPage() {
   const [isCalling, setIsCalling] = useState(false)
   const [startTime, setStartTime] = useState<Date | null>(null)
   const [duration, setDuration] = useState(0)
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Call Logging Form States
   const [outcome, setOutcome] = useState<CallOutcome>('interested')

@@ -59,9 +59,9 @@ export function DashboardPage() {
   const profit = revenueThisMonth - expensesThisMonth
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-none w-full px-8 py-6 space-y-6">
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <KpiCard title="Total Leads" value={totalLeads.toLocaleString()} icon={<Users className="w-5 h-5" />} index={0} />
         <KpiCard title="Today's Calls" value={todaysCalls} icon={<Phone className="w-5 h-5" />} index={1} />
         <KpiCard title="Pending Calls" value={pendingCalls} icon={<PhoneOff className="w-5 h-5" />} index={2} />
@@ -70,19 +70,33 @@ export function DashboardPage() {
         <KpiCard title="Not Interested" value={notInterested} icon={<ThumbsDown className="w-5 h-5" />} index={5} />
         <KpiCard title="Closed Deals" value={closedDeals} icon={<Handshake className="w-5 h-5" />} index={6} />
         <KpiCard title="Revenue" value={formatCurrency(revenueThisMonth)} icon={<TrendingUp className="w-5 h-5" />} index={7} />
-        <KpiCard title="Expenses" value={formatCurrency(expensesThisMonth)} icon={<TrendingDown className="w-5 h-5" />} index={8} />
-        <KpiCard title="Profit" value={formatCurrency(profit)} icon={<DollarSign className="w-5 h-5" />} index={9} />
+        <div className="sm:col-span-1 lg:col-span-2">
+          <KpiCard title="Expenses" value={formatCurrency(expensesThisMonth)} icon={<TrendingDown className="w-5 h-5" />} index={8} />
+        </div>
+        <div className="sm:col-span-1 lg:col-span-2">
+          <KpiCard title="Profit" value={formatCurrency(profit)} icon={<DollarSign className="w-5 h-5" />} index={9} />
+        </div>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <DailyCallsChart calls={calls} />
-        <ConversionChart leads={leads} />
-        <RevenueChart revenues={revenues} />
+      {/* Main Charts 12-Column Grid */}
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-12 lg:col-span-8">
+          <RevenueChart revenues={revenues} />
+        </div>
+        <div className="col-span-12 lg:col-span-4">
+          <DailyCallsChart calls={calls} />
+        </div>
       </div>
 
-      {/* Activity & Follow-ups Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Secondary Chart Row */}
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-12">
+          <ConversionChart leads={leads} />
+        </div>
+      </div>
+
+      {/* Bottom Section 2-Column Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <RecentActivityFeed activities={activities} leads={leads} />
         <UpcomingFollowUps calls={calls} leads={leads} />
       </div>

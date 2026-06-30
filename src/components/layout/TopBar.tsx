@@ -38,7 +38,7 @@ export function TopBar() {
 
   return (
     <>
-      <header className="h-16 bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-[#1a1a1a] flex items-center justify-between px-8 sticky top-0 z-30">
+      <header className="h-[72px] shrink-0 bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-[#1a1a1a] flex items-center justify-between px-8 sticky top-0 z-30">
         {/* Left: Page Title */}
         <div>
           <h1 className="text-lg font-semibold text-white">{pageTitle}</h1>

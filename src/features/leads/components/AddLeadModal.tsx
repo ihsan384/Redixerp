@@ -17,7 +17,21 @@ const leadSchema = z.object({
   website: z.string().optional().or(z.literal('')),
   address: z.string().optional().or(z.literal('')),
   rating: z.coerce.number().min(0).max(5).optional(),
-  status: z.string().min(1) as z.Schema<LeadStatus>,
+  status: z.enum([
+    'new',
+    'called',
+    'no_answer',
+    'busy',
+    'interested',
+    'not_interested',
+    'already_has_website',
+    'call_later',
+    'wrong_number',
+    'owner_not_available',
+    'meeting_scheduled',
+    'converted',
+    'lost'
+  ]),
   assigned_to: z.string().optional().or(z.literal('')),
   notes: z.string().optional().or(z.literal('')),
 })
