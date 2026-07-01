@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import type { Employee, Call, Lead, EmployeeRole } from '@/types'
 import { EMPLOYEE_ROLE_LABELS } from '@/utils/constants'
 import { toast } from 'sonner'
@@ -24,42 +25,59 @@ interface AddMemberModalProps {
 function AddMemberModal({ isOpen, onClose, onSave }: AddMemberModalProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [role, setRole] = useState<EmployeeRole>('sales_rep')
 
   if (!isOpen) return null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name || !email) {
-      toast.error('Name and Email are required')
+    if (!name || !email || !password) {
+      toast.error('All fields (Name, Email, and Password) are required')
+      return
+    }
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters')
       return
     }
 
-    const payload: Omit<Employee, 'id' | 'created_at' | 'updated_at' | 'is_active'> = {
-      name,
-      email,
-      role,
-    }
-
     try {
-      // NOTE: User creation in Supabase auth usually requires admin client / service role or invites.
-      // However, we insert into public.employees to register their CRM profile.
-      // We generate a temporary UUID since they don't have an auth.users ID yet, or they can register themselves later.
-      // If auth trigger is configured, signing up registers their profile automatically.
-      const { error } = await supabase.from('employees').insert({
-        id: crypto.randomUUID(),
-        ...payload,
-      } as never)
+      // Initialize a temporary, non-persisted client to sign up the user
+      // so the logged-in administrator's session is not affected.
+      const tempSupabase = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY,
+        {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+          },
+        }
+      )
+
+      const { error } = await tempSupabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+            role: role,
+          },
+        },
+      })
+
       if (error) throw error
 
-      toast.success('Team member added successfully!')
+      toast.success('Team member registered successfully!')
       onSave()
       onClose()
       setName('')
       setEmail('')
+      setPassword('')
     } catch (err: unknown) {
       console.error('[AddMemberModal] Error adding employee record:', err)
-      toast.error('Failed to add employee record')
+      toast.error(err instanceof Error ? err.message : 'Failed to add employee record')
     }
   }
 
@@ -98,6 +116,18 @@ function AddMemberModal({ isOpen, onClose, onSave }: AddMemberModalProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="e.g. zain@redix.media"
+              className="w-full"
+              required
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Password *</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Min 6 characters"
               className="w-full"
               required
             />
