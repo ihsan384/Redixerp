@@ -66,6 +66,9 @@ const OUTCOME_COLORS: Record<CallOutcome, { bg: string; text: string; border: st
   wrong_number:      { bg: 'bg-red-500/10',      text: 'text-red-400',     border: 'border-red-500/20' },
   spam:              { bg: 'bg-zinc-700/40',     text: 'text-zinc-500',    border: 'border-zinc-600/30' },
   not_interested:    { bg: 'bg-rose-500/10',     text: 'text-rose-400',    border: 'border-rose-500/20' },
+  already_has_website: { bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/20' },
+  call_later:          { bg: 'bg-cyan-500/10',   text: 'text-cyan-400',   border: 'border-cyan-500/20' },
+  owner_not_available: { bg: 'bg-yellow-500/10', text: 'text-yellow-400', border: 'border-yellow-500/20' },
 }
 
 const PRIORITY_CFG = {

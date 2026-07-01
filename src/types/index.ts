@@ -33,6 +33,9 @@ export type CallOutcome =
   | 'wrong_number'
   | 'spam'
   | 'not_interested'
+  | 'already_has_website'
+  | 'call_later'
+  | 'owner_not_available'
 
 export type EmployeeRole = 'admin' | 'sales_manager' | 'designer' | 'developer' | 'sales_rep' | 'finance' | 'viewer'
 

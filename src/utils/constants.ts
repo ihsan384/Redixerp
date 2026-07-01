@@ -48,6 +48,9 @@ export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
   wrong_number: 'Wrong Number',
   spam: 'Spam',
   not_interested: 'Not Interested',
+  already_has_website: 'Has Website',
+  call_later: 'Call Later',
+  owner_not_available: 'Owner Unavailable',
 }
 
 export const EMPLOYEE_ROLE_LABELS: Record<EmployeeRole, string> = {

@@ -216,9 +216,9 @@ export function RevenuePage() {
         supabase.from('leads').select('*')
       ])
       
-      const enrichedRevs = (revsData || []).map((r) => ({
+      const enrichedRevs = ((revsData || []) as any[]).map((r) => ({
         ...r,
-        lead: (leadsData || []).find((l) => l.id === r.lead_id),
+        lead: ((leadsData || []) as any[]).find((l) => l.id === r.lead_id),
       }))
 
       setRevenues(enrichedRevs as Revenue[])
