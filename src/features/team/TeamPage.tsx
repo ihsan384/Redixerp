@@ -58,6 +58,7 @@ function AddMemberModal({ isOpen, onClose, onSave }: AddMemberModalProps) {
       setName('')
       setEmail('')
     } catch (err: unknown) {
+      console.error('[AddMemberModal] Error adding employee record:', err)
       toast.error('Failed to add employee record')
     }
   }

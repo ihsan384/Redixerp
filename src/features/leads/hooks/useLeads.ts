@@ -5,7 +5,7 @@ import type { Lead, LeadFormData, LeadStatus } from '@/types'
 export function useLeads(filters?: {
   search?: string
   category?: string
-  status?: LeadStatus
+  status?: LeadStatus | 'all'
   assignedTo?: string
 }) {
   const queryClient = useQueryClient()
@@ -90,7 +90,7 @@ export function useLeads(filters?: {
         .select('phone')
       if (fetchErr) throw fetchErr
 
-      const existingPhones = new Set(existingPhonesData.map((l) => l.phone))
+      const existingPhones = new Set(((existingPhonesData || []) as any[]).map((l) => l.phone))
       const leadsToInsert = newLeads
         .filter((l) => !existingPhones.has(l.phone))
         .map((l) => ({

@@ -211,18 +211,16 @@ export function RevenuePage() {
 
   const loadData = async () => {
     try {
-      const [{ data: revsData }, { data: leadsData }] = await Promise.all([
-        supabase.from('revenue').select('*'),
-        supabase.from('leads').select('*')
-      ])
+      const { data: revsData } = await supabase.from('revenue').select('*') as unknown as { data: Revenue[] | null }
+      const { data: leadsData } = await supabase.from('leads').select('*') as unknown as { data: Lead[] | null }
       
-      const enrichedRevs = ((revsData || []) as any[]).map((r) => ({
+      const enrichedRevs = (revsData || []).map((r) => ({
         ...r,
-        lead: ((leadsData || []) as any[]).find((l) => l.id === r.lead_id),
+        lead: (leadsData || []).find((l) => l.id === r.lead_id),
       }))
 
       setRevenues(enrichedRevs as Revenue[])
-      setLeads((leadsData || []) as Lead[])
+      setLeads(leadsData || [])
     } catch (e) {
       console.error(e)
       toast.error('Failed to load revenue transactions')
