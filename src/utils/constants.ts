@@ -1,4 +1,4 @@
-import type { LeadStatus, CallOutcome, EmployeeRole, ExpenseCategory } from '@/types'
+import type { LeadStatus, CallOutcome, EmployeeRole, ExpenseCategory, PaymentStatus, PaymentMethod } from '@/types'
 
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   new: 'New',
@@ -64,15 +64,48 @@ export const EMPLOYEE_ROLE_LABELS: Record<EmployeeRole, string> = {
 }
 
 export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
-  software: 'Software',
-  hosting: 'Hosting',
-  domains: 'Domains',
-  advertisements: 'Advertisements',
-  travel: 'Travel',
-  food: 'Food',
   office: 'Office',
   salary: 'Salary',
+  internet: 'Internet',
+  electricity: 'Electricity',
+  hosting: 'Hosting',
+  domain: 'Domain',
+  software: 'Software Subscription',
+  travel: 'Travel',
+  marketing: 'Marketing',
+  equipment: 'Equipment',
+  domains: 'Domains',
+  advertisements: 'Advertisements',
+  food: 'Food',
   miscellaneous: 'Miscellaneous',
+}
+
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  paid: 'Paid',
+  partial: 'Partial Payment',
+  pending: 'Pending',
+  overdue: 'Overdue',
+  cancelled: 'Cancelled',
+  refunded: 'Refunded',
+}
+
+export const PAYMENT_STATUS_COLORS: Record<PaymentStatus, string> = {
+  paid: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
+  partial: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20',
+  pending: 'bg-red-500/15 text-red-400 border-red-500/20',
+  overdue: 'bg-orange-500/15 text-orange-400 border-orange-500/20',
+  cancelled: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/20',
+  refunded: 'bg-blue-500/15 text-blue-400 border-blue-500/20',
+}
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  cash: 'Cash',
+  upi: 'UPI',
+  bank_transfer: 'Bank Transfer',
+  cheque: 'Cheque',
+  card: 'Card Payment',
+  online: 'Online Gateway',
+  other: 'Other',
 }
 
 export const LEAD_CATEGORIES = [
@@ -103,7 +136,7 @@ export const NAV_ITEMS = [
   { id: 'call-history', label: 'Call History', icon: 'History', path: '/call-history' },
   { id: 'followups', label: 'Follow Ups', icon: 'CalendarClock', path: '/follow-ups' },
   { id: 'clients', label: 'Clients', icon: 'Briefcase', path: '/clients' },
-  { id: 'revenue', label: 'Revenue', icon: 'TrendingUp', path: '/revenue' },
+  { id: 'revenue', label: 'Finance Hub', icon: 'Landmark', path: '/revenue' },
   { id: 'expenses', label: 'Expenses', icon: 'Receipt', path: '/expenses' },
   { id: 'reports', label: 'Reports', icon: 'BarChart3', path: '/reports' },
   { id: 'team', label: 'Team', icon: 'UserCheck', path: '/team' },

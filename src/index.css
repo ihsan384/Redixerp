@@ -710,3 +710,255 @@ table tbody tr:last-child td {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ============================================================
+   Finance Management System — Custom Styles
+   ============================================================ */
+
+/* Finance Tab Navigation */
+.fin-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.fin-tabs::-webkit-scrollbar { display: none; }
+
+.fin-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #71717a;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid transparent;
+  cursor: pointer;
+  background: transparent;
+}
+
+.fin-tab:hover {
+  color: #ffffff;
+  background: rgba(255,255,255,0.05);
+}
+
+.fin-tab.active {
+  color: #ffffff;
+  background: rgba(229, 57, 53, 0.12);
+  border-color: rgba(229, 57, 53, 0.25);
+}
+
+/* Finance KPI Cards */
+.fin-kpi-card {
+  position: relative;
+  background: linear-gradient(135deg, rgba(23,23,23,0.8) 0%, rgba(17,17,17,0.9) 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 20px 24px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fin-kpi-card:hover {
+  border-color: rgba(255,255,255,0.14);
+  transform: translateY(-2px);
+  box-shadow: 0 20px 48px rgba(0,0,0,0.5);
+}
+
+.fin-kpi-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.015) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* Progress Bar */
+.fin-progress-wrap {
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.fin-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Circular Progress Indicator */
+.fin-circle-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fin-circle-wrap svg {
+  transform: rotate(-90deg);
+}
+
+.fin-circle-wrap .circle-text {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* Animated Number Counter */
+@keyframes fin-count-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.fin-counter {
+  animation: fin-count-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Ledger Timeline */
+.fin-timeline {
+  position: relative;
+  padding-left: 24px;
+}
+
+.fin-timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: linear-gradient(to bottom, rgba(229,57,53,0.4), rgba(255,255,255,0.04));
+  border-radius: 999px;
+}
+
+.fin-timeline-item {
+  position: relative;
+  padding-bottom: 20px;
+}
+
+.fin-timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(229,57,53,0.6);
+  border: 2px solid rgba(229,57,53,0.3);
+  box-shadow: 0 0 8px rgba(229,57,53,0.3);
+}
+
+.fin-timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+/* Client Finance Card */
+.fin-client-card {
+  background: linear-gradient(135deg, rgba(20,20,20,0.9) 0%, rgba(15,15,15,0.95) 100%);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fin-client-card:hover {
+  border-color: rgba(255,255,255,0.13);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+}
+
+/* Finance Status Badge */
+.fin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid;
+}
+
+/* Invoice Card */
+.fin-invoice-card {
+  background: rgba(17,17,17,0.7);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 16px 20px;
+  transition: all 0.2s ease;
+}
+
+.fin-invoice-card:hover {
+  background: rgba(20,20,20,0.9);
+  border-color: rgba(255,255,255,0.12);
+}
+
+/* Partner Card */
+.fin-partner-card {
+  background: linear-gradient(135deg, rgba(23,23,23,0.85) 0%, rgba(17,17,17,0.9) 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
+  padding: 24px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.fin-partner-card::after {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 120px;
+  height: 120px;
+  background: rgba(229,57,53,0.04);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Sticky Finance Summary Bar */
+.fin-sticky-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(9,9,9,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 12px 24px;
+}
+
+/* Finance Section Divider */
+.fin-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  margin: 24px 0;
+}
+
+/* Animated shimmer for loading */
+@keyframes fin-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.fin-loading {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: fin-shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+

@@ -23,12 +23,16 @@ export function formatDuration(seconds: number): string {
 }
 
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-PK', {
+  return new Intl.NumberFormat('en-IN', {
     style: 'currency',
-    currency: 'PKR',
+    currency: 'INR',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount)
+}
+
+export function formatIndianNumber(amount: number): string {
+  return new Intl.NumberFormat('en-IN').format(amount)
 }
 
 export function isDateToday(date: string | Date): boolean {

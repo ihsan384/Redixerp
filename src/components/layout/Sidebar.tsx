@@ -18,6 +18,11 @@ import {
   LogOut,
   ChevronDown,
   History,
+  FileText,
+  FileSignature,
+  Quote,
+  LayoutTemplate,
+  RefreshCw,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { cn } from '@/utils/cn'
@@ -35,6 +40,11 @@ const iconMap = {
   UserCheck,
   Settings,
   History,
+  FileText,
+  FileSignature,
+  Quote,
+  LayoutTemplate,
+  RefreshCw,
 } as const
 
 const navItems = [
@@ -49,6 +59,14 @@ const navItems = [
   { id: 'reports', label: 'Reports', icon: 'BarChart3' as const, path: '/reports' },
   { id: 'team', label: 'Team', icon: 'UserCheck' as const, path: '/team' },
   { id: 'settings', label: 'Settings', icon: 'Settings' as const, path: '/settings' },
+]
+
+const billingSubItems = [
+  { id: 'billing-invoices',   label: 'Invoices',   icon: 'FileText'      as const, path: '/billing/invoices'   },
+  { id: 'billing-agreements', label: 'Agreements', icon: 'FileSignature' as const, path: '/billing/agreements' },
+  { id: 'billing-quotations', label: 'Quotations', icon: 'Quote'         as const, path: '/billing/quotations' },
+  { id: 'billing-templates',  label: 'Templates',  icon: 'LayoutTemplate'as const, path: '/billing/templates'  },
+  { id: 'billing-recurring',  label: 'Recurring',  icon: 'RefreshCw'     as const, path: '/billing/recurring'  },
 ]
 
 const navSections = [
@@ -107,12 +125,87 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
     fetchCounts()
   }, [location.pathname])
 
+  const isBillingActive = location.pathname.startsWith('/billing')
+  const [billingOpen, setBillingOpen] = useState(isBillingActive)
+
   const getBadgeValue = (id: string) => {
     if (id === 'leads' && counts.leads > 0) return counts.leads
     if (id === 'call-center' && counts.calls > 0) return counts.calls
     if (id === 'followups' && counts.followUps > 0) return counts.followUps
     return null
   }
+
+  const renderBillingSection = () => (
+    <div className="space-y-0.5">
+      {/* Billing section header — accordion toggle */}
+      <button
+        onClick={() => setBillingOpen(prev => !prev)}
+        className={cn(
+          'group flex items-center justify-between w-full mx-2 px-3 py-2 rounded-xl text-caption font-medium transition-all duration-200',
+          isBillingActive
+            ? 'bg-white/[0.06] text-white font-semibold'
+            : 'text-[#A1A1AA] hover:bg-white/[0.03] hover:text-white'
+        )}
+        style={{ width: 'calc(100% - 16px)' }}
+      >
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            'flex items-center justify-center w-7 h-7 rounded-lg transition-colors',
+            isBillingActive ? 'bg-white/10 text-white' : 'text-[#71717A] group-hover:text-white group-hover:bg-white/[0.04]'
+          )}>
+            <FileText className="w-[18px] h-[18px]" />
+          </div>
+          {!collapsed && <span className="whitespace-nowrap">Billing</span>}
+        </div>
+        {!collapsed && (
+          <ChevronDown className={cn('w-3.5 h-3.5 transition-transform duration-200', billingOpen ? 'rotate-180' : '')} />
+        )}
+      </button>
+
+      {/* Sub-items */}
+      <AnimatePresence initial={false}>
+        {(billingOpen || isBillingActive) && !collapsed && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="ml-4 pl-3 border-l border-white/[0.06] space-y-0.5 py-1">
+              {billingSubItems.map(item => {
+                const Icon = iconMap[item.icon]
+                const isActive = location.pathname.startsWith(item.path)
+                return (
+                  <NavLink
+                    key={item.id}
+                    to={item.path}
+                    onClick={onMobileClose}
+                    className={cn(
+                      'flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-caption font-medium transition-all duration-200 relative',
+                      isActive
+                        ? 'bg-white/[0.06] text-white font-semibold'
+                        : 'text-[#A1A1AA] hover:bg-white/[0.03] hover:text-white'
+                    )}
+                  >
+                    <Icon className="w-3.5 h-3.5 shrink-0" />
+                    <span className="text-xs">{item.label}</span>
+                    {isActive && (
+                      <motion.div
+                        layoutId="sidebar-billing-active"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-red-500 rounded-r-full"
+                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                      />
+                    )}
+                  </NavLink>
+                )
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
 
   const renderNavList = () => (
     <div className="space-y-6">
@@ -181,8 +274,19 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
           </div>
         </div>
       ))}
+
+      {/* Billing Section */}
+      <div className="space-y-1.5">
+        {!collapsed && (
+          <h4 className="px-4 text-[10px] font-bold uppercase tracking-wider text-[#71717A] mb-2">
+            Billing
+          </h4>
+        )}
+        {renderBillingSection()}
+      </div>
     </div>
   )
+
 
   const sidebarContent = (
     <div className="h-full flex flex-col justify-between overflow-hidden">

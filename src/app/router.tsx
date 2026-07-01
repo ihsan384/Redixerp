@@ -16,6 +16,14 @@ import { ReportsPage } from '@/features/reports/ReportsPage'
 import { TeamPage } from '@/features/team/TeamPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 
+// Billing Module
+import { BillingLayout } from '@/features/billing/BillingLayout'
+import { InvoicesPage } from '@/features/billing/invoices/InvoicesPage'
+import { AgreementsPage } from '@/features/billing/agreements/AgreementsPage'
+import { QuotationsPage } from '@/features/billing/quotations/QuotationsPage'
+import { TemplatesPage } from '@/features/billing/templates/TemplatesPage'
+import { RecurringPage } from '@/features/billing/recurring/RecurringPage'
+
 interface ProtectedRouteProps {
   children: React.ReactNode
 }
@@ -68,9 +76,20 @@ export function AppRoutes() {
         <Route path="reports" element={<ReportsPage />} />
         <Route path="team" element={<TeamPage />} />
         <Route path="settings" element={<SettingsPage />} />
+
+        {/* Billing Module */}
+        <Route path="billing" element={<BillingLayout />}>
+          <Route index element={<Navigate to="invoices" replace />} />
+          <Route path="invoices" element={<InvoicesPage />} />
+          <Route path="agreements" element={<AgreementsPage />} />
+          <Route path="quotations" element={<QuotationsPage />} />
+          <Route path="templates" element={<TemplatesPage />} />
+          <Route path="recurring" element={<RecurringPage />} />
+        </Route>
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
+
