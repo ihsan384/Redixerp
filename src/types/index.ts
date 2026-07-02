@@ -520,3 +520,112 @@ export interface BillingTemplate {
   company?: Partial<InvoiceCompany>
   footer_text?: string
 }
+
+// ============================================================
+// Client Management System Types
+// ============================================================
+
+export type ClientStatus =
+  | 'lead'
+  | 'discussion'
+  | 'proposal_sent'
+  | 'active_project'
+  | 'completed'
+  | 'cancelled'
+
+export interface Client {
+  id: string
+  name: string
+  company_name: string
+  logo_url?: string
+  contact_person: string
+  email: string
+  phone: string
+  whatsapp?: string
+  address?: string
+  gst_number?: string
+  website?: string
+  social_links?: {
+    linkedin?: string
+    twitter?: string
+    facebook?: string
+    instagram?: string
+  }
+  industry: string
+  status: ClientStatus
+  project_progress: number // 0 to 100
+  total_project_value: number
+  advance_paid: number
+  created_at: string
+  updated_at: string
+}
+
+export type ClientNoteCategory = 'internal' | 'client' | 'meeting' | 'call'
+
+export interface ClientNote {
+  id: string
+  client_id: string
+  category: ClientNoteCategory
+  title: string
+  content: string
+  created_by?: string
+  created_at: string
+}
+
+export interface ClientFile {
+  id: string
+  client_id: string
+  name: string
+  category: 'contracts' | 'logo' | 'brand_kit' | 'images' | 'videos' | 'documents' | 'invoices' | 'receipts'
+  size: number
+  url: string
+  created_at: string
+}
+
+export interface ClientTimelineEvent {
+  id: string
+  client_id: string
+  title: string
+  description: string
+  status: string
+  created_at: string
+}
+
+export interface RequirementQuestionnaireData {
+  id: string
+  client_id: string
+  step1?: {
+    business_name: string
+    industry: string
+    products: string
+    services: string
+    target_audience: string
+  }
+  step2?: {
+    website_goal: 'lead_generation' | 'sales' | 'portfolio' | 'booking' | 'branding' | 'others' | string
+  }
+  step3?: {
+    preferred_style: 'minimal' | 'luxury' | 'modern' | 'corporate' | 'dark' | 'light' | string
+    brand_colors: string
+    reference_websites: string
+    fonts: string
+  }
+  step4?: {
+    features: string[] // booking, payments, login, blog, whatsapp, forms, chat, gallery, testimonials, newsletter, multi_language, cms, analytics, etc.
+  }
+  step5?: {
+    need_copywriting: boolean
+    need_logo: boolean
+    need_images: boolean
+    need_seo: boolean
+  }
+  step6?: {
+    marketing: string[] // google_ads, meta_ads, seo, email_marketing
+    budget: string
+    timeline: string
+    additional_notes: string
+  }
+  created_at: string
+  updated_at: string
+}
+

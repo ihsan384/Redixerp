@@ -1,319 +1,502 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Briefcase,
-  Phone,
-  MessageSquare,
-  MapPin,
+  Search,
   Plus,
-  DollarSign,
-  Award,
   TrendingUp,
-  X,
+  Award,
+  DollarSign,
+  Filter,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  UserPlus,
+  Edit,
+  Trash2,
+  ChevronRight,
+  Sparkles,
+  Phone,
+  Building,
+  UserCheck
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import type { Lead, Revenue, PaymentStatus, PaymentMethod } from '@/types'
+import type { Client, ClientStatus } from '@/types'
 import { formatCurrency } from '@/utils/format'
 import { toast } from 'sonner'
+import * as XLSX from 'xlsx'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
-interface RecordRevenueModalProps {
-  isOpen: boolean
-  onClose: () => void
-  client: Lead | null
-  onSave: () => void
-}
+// Child components
+import { ClientForm } from './components/ClientForm'
+import { ClientDetail } from './components/ClientDetail'
 
-function RecordRevenueModal({ isOpen, onClose, client, onSave }: RecordRevenueModalProps) {
-  const [packageName, setPackageName] = useState('Premium Website & SEO')
-  const [amount, setAmount] = useState('25000')
-  const [status, setStatus] = useState<PaymentStatus>('paid')
-  const [method, setMethod] = useState<PaymentMethod>('bank_transfer')
-  const [notes, setNotes] = useState('')
-
-  if (!isOpen || !client) return null
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const numAmount = parseFloat(amount)
-    if (isNaN(numAmount) || numAmount <= 0) {
-      toast.error('Please enter a valid amount')
-      return
-    }
-
-    const payload: Omit<Revenue, 'id' | 'created_at'> = {
-      lead_id: client.id,
-      package: packageName,
-      amount: numAmount,
-      payment_status: status,
-      payment_method: method,
-      received_date: new Date().toISOString().split('T')[0],
-      notes: notes || undefined,
-    }
-
-    try {
-      const { error } = await supabase.from('revenue').insert(payload as never)
-      if (error) throw error
-
-      const newAct = {
-        lead_id: client.id,
-        type: 'converted' as const,
-        description: `Received payment of ${formatCurrency(numAmount)} for ${packageName}.`,
-      }
-      await supabase.from('activities').insert(newAct as never)
-
-      toast.success('Payment transaction saved successfully!')
-      onSave()
-      onClose()
-    } catch (err: unknown) {
-      toast.error('Failed to record payment')
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div onClick={onClose} className="modal-backdrop" />
-      <form
-        onSubmit={handleSubmit}
-        aria-label="Record client payment"
-        className="modal-panel z-10 w-full max-w-md space-y-4 p-6"
-      >
-        <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Record Invoice / Payment</h3>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/[0.04] text-zinc-500 hover:text-white transition-colors">
-            <X className="w-4.5 h-4.5" />
-          </button>
-        </div>
-
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Partner Account</label>
-            <p className="text-xs font-bold text-white bg-white/[0.01] p-3 rounded-xl border border-white/[0.06]">
-              {client.shop_name}
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Package / Deliverable</label>
-            <input
-              type="text"
-              value={packageName}
-              onChange={(e) => setPackageName(e.target.value)}
-              placeholder="e.g. Starter Package Website"
-              className="w-full"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Amount (PKR)</label>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full"
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as PaymentStatus)}
-                className="w-full"
-              >
-                <option value="paid">Paid</option>
-                <option value="partial">Partial</option>
-                <option value="pending">Pending</option>
-                <option value="overdue">Overdue</option>
-              </select>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Payment Method</label>
-            <select
-              value={method}
-              onChange={(e) => setMethod(e.target.value as PaymentMethod)}
-              className="w-full"
-            >
-              <option value="bank_transfer">Bank Transfer</option>
-              <option value="online">Online Payment Gateway</option>
-              <option value="card">Credit/Debit Card</option>
-              <option value="cash">Cash</option>
-              <option value="other">Other Method</option>
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Transaction Notes</label>
-            <input
-              type="text"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Downpayment 50%"
-              className="w-full"
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-3 pt-3.5 border-t border-white/[0.06] mt-5">
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn-secondary h-11 px-4 text-xs font-bold"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="btn-primary h-11 px-5 text-xs font-bold"
-          >
-            Save Transaction
-          </button>
-        </div>
-      </form>
-    </div>
-  )
+const STATUS_DETAILS: Record<ClientStatus, { label: string; class: string; dot: string }> = {
+  lead:           { label: 'Lead',           class: 'text-blue-400 bg-blue-500/10 border-blue-500/20',     dot: 'bg-blue-400' },
+  discussion:     { label: 'Discussion',     class: 'text-purple-400 bg-purple-500/10 border-purple-500/20', dot: 'bg-purple-400' },
+  proposal_sent:  { label: 'Proposal Sent',  class: 'text-amber-400 bg-amber-500/10 border-amber-500/20',   dot: 'bg-amber-400' },
+  active_project: { label: 'Active Project', class: 'text-red-400 bg-red-500/10 border-red-500/20 shadow-[0_0_6px_rgba(239,68,68,0.1)]', dot: 'bg-red-400' },
+  completed:      { label: 'Completed',      class: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', dot: 'bg-emerald-400' },
+  cancelled:      { label: 'Cancelled',      class: 'text-zinc-500 bg-zinc-500/10 border-zinc-500/20',     dot: 'bg-zinc-500' }
 }
 
 export function ClientsPage() {
-  const navigate = useNavigate()
-  const [clients, setClients] = useState<Lead[]>([])
-  const [revenues, setRevenues] = useState<Revenue[]>([])
+  const [clients, setClients] = useState<Client[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<ClientStatus | 'all'>('all')
 
-  // Modal controls
-  const [selectedClient, setSelectedClient] = useState<Lead | null>(null)
-  const [isRecordOpen, setIsRecordOpen] = useState(false)
+  // Navigation / Modal controls
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingClient, setEditingClient] = useState<Client | undefined>(undefined)
 
-  const loadData = async () => {
+  const loadClients = async () => {
     try {
-      const [{ data: leadsData }, { data: revsData }] = await Promise.all([
-        supabase.from('leads').select('*').eq('status', 'converted'),
-        supabase.from('revenue').select('*')
-      ])
-      setClients((leadsData || []) as Lead[])
-      setRevenues((revsData || []) as Revenue[])
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      if (error) throw error
+      setClients((data || []) as Client[])
     } catch (e) {
       console.error(e)
-      toast.error('Failed to load clients / revenue records')
+      toast.error('Failed to retrieve client portfolios')
+    } finally {
+      setLoading(false)
     }
   }
 
   useEffect(() => {
-    loadData()
+    loadClients()
   }, [])
 
-  const totalClients = clients.length
-  const totalValueGenerated = revenues.reduce((acc, r) => acc + r.amount, 0)
+  // Calculations
+  const metrics = useMemo(() => {
+    const total = clients.length
+    const active = clients.filter(c => c.status === 'active_project').length
+    const totalVal = clients.reduce((acc, c) => acc + c.total_project_value, 0)
+    const paid = clients.reduce((acc, c) => acc + c.advance_paid, 0)
+    const balance = Math.max(0, totalVal - paid)
+    return { total, active, totalVal, paid, balance }
+  }, [clients])
 
-  const handleRecordPayment = (client: Lead) => {
-    setSelectedClient(client)
-    setIsRecordOpen(true)
+  // Filters & Search
+  const filteredClients = useMemo(() => {
+    return clients.filter(c => {
+      const matchSearch = 
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.company_name.toLowerCase().includes(search.toLowerCase()) ||
+        c.industry.toLowerCase().includes(search.toLowerCase()) ||
+        c.phone.includes(search) ||
+        (c.gst_number || '').toLowerCase().includes(search.toLowerCase())
+
+      const matchStatus = statusFilter === 'all' || c.status === statusFilter
+      return matchSearch && matchStatus
+    })
+  }, [clients, search, statusFilter])
+
+  // Save / Update client
+  const handleSaveClient = async (data: Omit<Client, 'id' | 'created_at' | 'updated_at'> & { id?: string }) => {
+    try {
+      const now = new Date().toISOString()
+      if (data.id) {
+        // Edit existing
+        const { error } = await supabase
+          .from('clients')
+          .update({ ...data, updated_at: now })
+          .eq('id', data.id)
+        
+        if (error) throw error
+        
+        // Log Activity
+        const newAct = {
+          lead_id: data.id,
+          type: 'note',
+          description: `Updated client profile parameters for "${data.company_name}".`
+        }
+        await supabase.from('activities').insert(newAct as never)
+      } else {
+        // Create new
+        const newId = `cli-${Date.now()}`
+        const payload = {
+          id: newId,
+          ...data,
+          project_progress: 0,
+          created_at: now,
+          updated_at: now
+        }
+        const { error } = await supabase.from('clients').insert(payload as never)
+        if (error) throw error
+
+        // Log Activity
+        const newAct = {
+          lead_id: newId,
+          type: 'converted',
+          description: `Created new client profile "${data.company_name}".`
+        }
+        await supabase.from('activities').insert(newAct as never)
+      }
+      loadClients()
+    } catch (e) {
+      console.error(e)
+      toast.error('Failed to persist client record')
+    }
+  }
+
+  // Delete client
+  const handleDeleteClient = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete the client portfolio for ${name}?`)) return
+    try {
+      const { error } = await supabase.from('clients').delete().eq('id', id)
+      if (error) throw error
+      
+      toast.success('Client deleted successfully')
+      loadClients()
+    } catch (e) {
+      console.error(e)
+      toast.error('Failed to delete client')
+    }
+  }
+
+  // Export to CSV
+  const handleExportCSV = () => {
+    if (filteredClients.length === 0) return
+    const headers = 'Client Name,Company Name,Industry,Phone,Email,Status,Project Progress %,Total Value,Paid Amount,Balance Due\n'
+    const rows = filteredClients.map(c => {
+      const balance = c.total_project_value - c.advance_paid
+      return `"${c.name}","${c.company_name}","${c.industry}","${c.phone}","${c.email}","${c.status}",${c.project_progress},${c.total_project_value},${c.advance_paid},${balance}`
+    }).join('\n')
+
+    const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `REDIX_Clients_${new Date().toISOString().slice(0,10)}.csv`
+    link.click()
+  }
+
+  // Export to Excel (xlsx)
+  const handleExportExcel = () => {
+    if (filteredClients.length === 0) return
+    const data = filteredClients.map(c => ({
+      'Client Name': c.name,
+      'Company Name': c.company_name,
+      'Industry': c.industry,
+      'Phone': c.phone,
+      'Email': c.email,
+      'Status': c.status.toUpperCase(),
+      'Progress %': c.project_progress,
+      'Total Project Value': c.total_project_value,
+      'Paid Amount': c.advance_paid,
+      'Balance Due': c.total_project_value - c.advance_paid
+    }))
+
+    const ws = XLSX.utils.json_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Clients Ledger')
+    XLSX.writeFile(wb, `REDIX_Clients_${new Date().toISOString().slice(0,10)}.xlsx`)
+  }
+
+  // Export List as PDF
+  const handleExportPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape', format: 'a4' })
+    doc.setFillColor(15, 15, 15)
+    doc.rect(0, 0, 297, 24, 'F')
+    
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(16)
+    doc.setTextColor(255, 255, 255)
+    doc.text('REDIX.MEDIA CLIENT PORTFOLIO LEDGER', 15, 15)
+
+    const rows = filteredClients.map((c, i) => [
+      String(i + 1),
+      c.company_name,
+      c.name,
+      c.industry,
+      c.phone,
+      c.status.toUpperCase(),
+      `${c.project_progress}%`,
+      formatCurrency(c.total_project_value),
+      formatCurrency(c.advance_paid),
+      formatCurrency(c.total_project_value - c.advance_paid)
+    ])
+
+    autoTable(doc, {
+      startY: 28,
+      head: [['S.#', 'Company', 'Contact Name', 'Industry', 'Phone', 'Status', 'Progress', 'Total Value', 'Paid', 'Balance']],
+      body: rows,
+      headStyles: { fillColor: [229, 57, 53], textColor: [255, 255, 255], fontSize: 8 },
+      bodyStyles: { fontSize: 7.5, textColor: [40, 40, 40] },
+      theme: 'grid'
+    })
+
+    doc.save(`REDIX_Clients_${new Date().toISOString().slice(0,10)}.pdf`)
+  }
+
+  if (selectedClientId) {
+    return (
+      <div className="page-shell">
+        <ClientDetail
+          clientId={selectedClientId}
+          onBack={() => {
+            setSelectedClientId(null)
+            loadClients()
+          }}
+        />
+      </div>
+    )
   }
 
   return (
     <div className="page-shell page-stack space-y-6">
-      {/* Header Info */}
-      <div className="panel-card flex items-center gap-3 p-5">
-        <Briefcase className="w-5 h-5 text-red-400" />
-        <div>
-          <p className="text-sm font-bold text-white">Client Portfolio</p>
-          <p className="text-xs text-zinc-500 mt-0.5">Manage converted accounts, issue invoice lines, and review closed deal values.</p>
+      {/* Header Panel */}
+      <div className="panel-card flex flex-wrap items-center justify-between gap-4 p-5 bg-gradient-to-br from-[#1c1c1e]/40 to-[#111112]/50 border border-white/[0.06] rounded-[20px] backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <Briefcase className="w-5 h-5 text-red-400 shrink-0" />
+          <div>
+            <h1 className="text-h4 font-bold text-white leading-none">Client Portfolio Hub</h1>
+            <p className="text-caption text-zinc-500 mt-1 font-medium">Manage converted accounts, track design requirements forms, issue NDA agreements, and check development timeline SLAs.</p>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            setEditingClient(undefined)
+            setIsFormOpen(true)
+          }}
+          className="btn-primary h-11 px-5 text-xs font-bold rounded-xl gap-1.5 shrink-0"
+        >
+          <UserPlus className="w-4 h-4" /> <span>Add Client Portfolio</span>
+        </button>
+      </div>
+
+      {/* Corporate KPIs Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-5 space-y-2 relative overflow-hidden">
+          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Total Accounts</p>
+          <p className="text-2xl font-bold text-white flex items-center gap-2 font-mono">
+            <Award className="w-6 h-6 text-red-500 shrink-0" /> {metrics.total}
+          </p>
+          <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/5 blur-[20px]" />
+        </div>
+
+        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-5 space-y-2 relative overflow-hidden">
+          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Active Dev Projects</p>
+          <p className="text-2xl font-bold text-red-400 flex items-center gap-2 font-mono">
+            <TrendingUp className="w-6 h-6 text-red-500 shrink-0" /> {metrics.active}
+          </p>
+          <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/5 blur-[20px]" />
+        </div>
+
+        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-5 space-y-2 relative overflow-hidden">
+          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Gross Contract Value</p>
+          <p className="text-2xl font-bold text-emerald-400 flex items-center gap-2 font-mono">
+            <DollarSign className="w-6 h-6 text-emerald-500 shrink-0" /> {formatCurrency(metrics.totalVal)}
+          </p>
+          <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 blur-[20px]" />
+        </div>
+
+        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-5 space-y-2 relative overflow-hidden">
+          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Dues Outstanding Balance</p>
+          <p className="text-2xl font-bold text-amber-500 flex items-center gap-2 font-mono">
+            <DollarSign className="w-6 h-6 text-amber-500 shrink-0" /> {formatCurrency(metrics.balance)}
+          </p>
+          <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/5 blur-[20px]" />
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-5 space-y-2">
-          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Converted Accounts</p>
-          <p className="text-2xl font-bold text-white flex items-center gap-2">
-            <Award className="w-6 h-6 text-red-400" /> {totalClients} Clients
-          </p>
+      {/* Toolbar - Search, Filter, Export */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        {/* Search */}
+        <div className="relative flex-1 max-w-md min-w-[240px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by company, contact, NTN..."
+            className="pl-9 w-full"
+          />
         </div>
-        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-5 space-y-2">
-          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Closed Contract Value</p>
-          <p className="text-2xl font-bold text-emerald-400 flex items-center gap-2">
-            <TrendingUp className="w-6 h-6 text-emerald-500" /> {formatCurrency(totalValueGenerated)}
-          </p>
-        </div>
-        <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl p-5 space-y-2">
-          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Average Deal Size</p>
-          <p className="text-2xl font-bold text-white flex items-center gap-2">
-            <DollarSign className="w-6 h-6 text-zinc-500" />{' '}
-            {totalClients > 0 ? formatCurrency(totalValueGenerated / totalClients) : 'PKR 0'}
-          </p>
-        </div>
-      </div>
 
-      {/* Table */}
-      <div className="bg-[#111111]/70 border border-white/[0.08] rounded-2xl overflow-hidden shadow-lg">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-white/[0.06] bg-white/[0.01] text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
-                <th className="px-5 py-3">Business Name</th>
-                <th className="px-5 py-3">Category</th>
-                <th className="px-5 py-3">Phone</th>
-                <th className="px-5 py-3">Address</th>
-                <th className="px-5 py-3">Invoice Status</th>
-                <th className="px-5 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/[0.04] text-xs">
-              {clients.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-5 py-10 text-center text-zinc-500 italic font-semibold">
-                    No converted clients registered. Convert leads from the leads pipeline.
-                  </td>
-                </tr>
-              ) : (
-                clients.map((client) => {
-                  const clientRevenues = revenues.filter((r) => r.lead_id === client.id)
-                  const hasPaid = clientRevenues.some((r) => r.payment_status === 'paid')
-                  const hasPartial = clientRevenues.some((r) => r.payment_status === 'partial')
-                  const hasOverdue = clientRevenues.some((r) => r.payment_status === 'overdue')
+        {/* Action Row */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Status filters */}
+          <div className="flex items-center gap-1 bg-[#111]/60 border border-white/[0.08] p-1 rounded-xl overflow-x-auto max-w-[360px] sm:max-w-md">
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={`px-3 h-8 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap ${
+                statusFilter === 'all'
+                  ? 'bg-white/[0.08] text-white'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              All
+            </button>
+            {(Object.keys(STATUS_DETAILS) as ClientStatus[]).map(status => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`px-3 h-8 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap ${
+                  statusFilter === status
+                    ? 'bg-red-500/10 text-red-400 border border-red-500/25'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                {STATUS_DETAILS[status].label}
+              </button>
+            ))}
+          </div>
 
-                  let badge = <span className="text-[10px] font-bold text-zinc-500 bg-zinc-500/10 px-2.5 py-1 border border-zinc-500/20 rounded-lg">Uninvoiced</span>
-                  if (hasOverdue) {
-                    badge = <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2.5 py-1 border border-red-500/20 rounded-lg">Overdue Invoice</span>
-                  } else if (hasPartial) {
-                    badge = <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 border border-amber-500/20 rounded-lg">Partial Payments</span>
-                  } else if (hasPaid) {
-                    badge = <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 border border-emerald-500/20 rounded-lg">Fully Paid</span>
-                  } else if (clientRevenues.length > 0) {
-                    badge = <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-2.5 py-1 border border-blue-500/20 rounded-lg">Invoice Sent</span>
-                  }
-
-                  return (
-                    <tr key={client.id} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="px-5 py-4 font-bold text-white">{client.shop_name}</td>
-                      <td className="px-5 py-4 text-zinc-400">{client.category}</td>
-                      <td className="px-5 py-4 font-mono text-zinc-400">{client.phone}</td>
-                      <td className="px-5 py-4 text-zinc-400 max-w-xs truncate">{client.address || '—'}</td>
-                      <td className="px-5 py-4">{badge}</td>
-                      <td className="px-5 py-4">
-                        <button
-                          onClick={() => handleRecordPayment(client)}
-                          className="btn-primary h-8 px-3 text-[11px] font-bold rounded-lg flex items-center gap-1.5"
-                        >
-                          <Plus className="w-3.5 h-3.5" /> <span>Invoice / Pay</span>
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+          {/* Export button group */}
+          <div className="flex items-center gap-1.5 border border-white/[0.08] bg-[#111]/40 p-1 rounded-xl">
+            <button
+              onClick={handleExportExcel}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+              title="Export as Excel"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleExportCSV}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+              title="Export as CSV"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleExportPDF}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              title="Export as PDF Document list"
+            >
+              <FileText className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Record payment modal */}
-      <RecordRevenueModal
-        isOpen={isRecordOpen}
+      {/* Portfolio Grid Layout */}
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <div className="w-8 h-8 border-2 border-red-500/20 border-t-red-500 animate-spin rounded-full" />
+        </div>
+      ) : filteredClients.length === 0 ? (
+        <div className="panel-card p-12 text-center border border-white/[0.06] bg-[#111]/20">
+          <Briefcase className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
+          <h3 className="text-white font-bold uppercase tracking-wider">No client profiles found</h3>
+          <p className="text-zinc-500 text-xs mt-1">Refine your search keywords or create a new client record to begin.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {filteredClients.map(client => {
+            const statusDetail = STATUS_DETAILS[client.status] || STATUS_DETAILS.lead
+            const balance = client.total_project_value - client.advance_paid
+            return (
+              <div
+                key={client.id}
+                onClick={() => setSelectedClientId(client.id)}
+                className="panel-card border border-white/[0.08] hover:border-red-500/40 bg-gradient-to-br from-[#111112]/90 to-[#0c0c0d]/95 hover:shadow-[0_8px_30px_rgb(0,0,0,0.4)] rounded-2xl p-5 space-y-4 cursor-pointer transition-all duration-300 group relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 blur-[24px] pointer-events-none group-hover:bg-red-500/10 transition-all" />
+
+                {/* Header details */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-zinc-700 to-zinc-900 border border-white/[0.08] text-white rounded-xl flex items-center justify-center font-bold text-sm">
+                      {client.company_name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white group-hover:text-red-400 transition-colors uppercase tracking-wider">
+                        {client.company_name}
+                      </h4>
+                      <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider mt-0.5">{client.industry}</p>
+                    </div>
+                  </div>
+
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${statusDetail.class}`}>
+                    <span className={`w-1 h-1 rounded-full ${statusDetail.dot}`} />
+                    {statusDetail.label}
+                  </span>
+                </div>
+
+                {/* Contact person */}
+                <div className="grid grid-cols-2 gap-2 text-xs pt-1.5 border-t border-white/[0.04]">
+                  <div>
+                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Contact Representative</span>
+                    <span className="text-zinc-300 font-semibold truncate block mt-0.5">{client.name}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Phone Contact</span>
+                    <span className="text-zinc-400 font-mono text-[10.5px] mt-0.5 block">{client.phone}</span>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center text-[10px]">
+                    <span className="text-zinc-500 font-bold uppercase tracking-wider">Milestone Progress</span>
+                    <span className="text-white font-bold font-mono">{client.project_progress}%</span>
+                  </div>
+                  <div className="w-full bg-white/[0.03] border border-white/[0.06] h-2 rounded-full overflow-hidden">
+                    <div className="bg-red-500 h-full transition-all duration-300" style={{ width: `${client.project_progress}%` }} />
+                  </div>
+                </div>
+
+                {/* Financial breakdown */}
+                <div className="grid grid-cols-3 gap-1 pt-2 border-t border-white/[0.04] text-[10px]">
+                  <div>
+                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Deal Value</span>
+                    <span className="text-zinc-300 font-semibold font-mono mt-0.5 block">{formatCurrency(client.total_project_value)}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Paid In</span>
+                    <span className="text-emerald-400 font-bold font-mono mt-0.5 block">{formatCurrency(client.advance_paid)}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Dues Remaining</span>
+                    <span className={`font-bold font-mono mt-0.5 block ${balance > 0 ? 'text-red-400' : 'text-zinc-500'}`}>{formatCurrency(balance)}</span>
+                  </div>
+                </div>
+
+                {/* Card hover details footer */}
+                <div className="flex justify-between items-center pt-2 border-t border-white/[0.04] text-[10px] text-zinc-500 font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="flex items-center gap-1 text-red-400">View detailed profile <ChevronRight className="w-3 h-3" /></span>
+                  <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                    <button
+                      onClick={() => {
+                        setEditingClient(client)
+                        setIsFormOpen(true)
+                      }}
+                      className="p-1 hover:text-white"
+                      title="Edit Client Parameters"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClient(client.id, client.company_name)}
+                      className="p-1 hover:text-red-400"
+                      title="Delete Client Profile"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Create / Edit Form Modal */}
+      <ClientForm
+        isOpen={isFormOpen}
         onClose={() => {
-          setIsRecordOpen(false)
-          setSelectedClient(null)
+          setIsFormOpen(false)
+          setEditingClient(undefined)
         }}
-        client={selectedClient}
-        onSave={loadData}
+        onSave={handleSaveClient}
+        client={editingClient}
       />
     </div>
   )

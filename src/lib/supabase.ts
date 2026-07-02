@@ -56,6 +56,11 @@ class MockBuilder {
       case 'revenue': return Storage.getRevenue()
       case 'expenses': return Storage.getExpenses()
       case 'employees': return Storage.getEmployees()
+      case 'clients': return Storage.getClients()
+      case 'client_notes': return Storage.getClientNotes()
+      case 'client_files': return Storage.getClientFiles()
+      case 'client_timeline': return Storage.getClientTimeline()
+      case 'client_questionnaire': return Storage.getClientQuestionnaire()
       default: return []
     }
   }
@@ -68,6 +73,11 @@ class MockBuilder {
       case 'revenue': Storage.saveRevenue(data); break
       case 'expenses': Storage.saveExpenses(data); break
       case 'employees': Storage.saveEmployees(data); break
+      case 'clients': Storage.saveClients(data); break
+      case 'client_notes': Storage.saveClientNotes(data); break
+      case 'client_files': Storage.saveClientFiles(data); break
+      case 'client_timeline': Storage.saveClientTimeline(data); break
+      case 'client_questionnaire': Storage.saveClientQuestionnaire(data); break
     }
   }
 

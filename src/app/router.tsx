@@ -15,6 +15,7 @@ import { ExpensesPage } from '@/features/expenses/ExpensesPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
 import { TeamPage } from '@/features/team/TeamPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
+import { AboutPage } from '@/features/about/AboutPage'
 
 // Billing Module
 import { BillingLayout } from '@/features/billing/BillingLayout'
@@ -76,6 +77,7 @@ export function AppRoutes() {
         <Route path="reports" element={<ReportsPage />} />
         <Route path="team" element={<TeamPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="about" element={<AboutPage />} />
 
         {/* Billing Module */}
         <Route path="billing" element={<BillingLayout />}>

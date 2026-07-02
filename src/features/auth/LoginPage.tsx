@@ -15,22 +15,6 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  const [dbMode, setDbModeState] = useState<DbMode>('supabase')
-
-  useEffect(() => {
-    setDbModeState(getDbMode())
-  }, [])
-
-  const handleToggleDbMode = () => {
-    const nextMode = dbMode === 'local' ? 'supabase' : 'local'
-    setDbMode(nextMode)
-    setDbModeState(nextMode)
-    toast.success(`Database mode switched to ${nextMode === 'supabase' ? 'Supabase Cloud' : 'Local Storage Sandbox'}! Reloading...`)
-    setTimeout(() => {
-      window.location.reload()
-    }, 1000)
-  }
-
   // Forgot password
   const [showForgot, setShowForgot] = useState(false)
   const [forgotEmail, setForgotEmail] = useState('')
@@ -344,23 +328,8 @@ export function LoginPage() {
               )}
             </AnimatePresence>
 
-            <div className="flex flex-col gap-2 pt-2 border-t border-white/[0.04]">
-              <div className="flex items-center justify-between text-[10px] text-zinc-500 uppercase font-bold tracking-wider">
-                <span className="flex items-center gap-1.5">
-                  <Database className="w-3.5 h-3.5 text-zinc-500" />
-                  Mode: {dbMode === 'supabase' ? 'Supabase Cloud' : 'Local Sandbox'}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleToggleDbMode}
-                  className="text-red-400 hover:text-red-300 transition-colors underline cursor-pointer font-bold"
-                >
-                  Switch to {dbMode === 'supabase' ? 'Sandbox' : 'Cloud'}
-                </button>
-              </div>
-              <div className="flex items-center gap-2 text-[10px] text-zinc-650 uppercase font-bold tracking-wider">
-                <ShieldCheck className="h-4 w-4 text-zinc-600" /> Secure 256-bit encrypted gateway session
-              </div>
+            <div className="flex items-center gap-2 text-[10px] text-zinc-600 uppercase font-bold tracking-wider pt-2 border-t border-white/[0.04]">
+              <ShieldCheck className="h-4 w-4 text-zinc-600" /> Secure 256-bit encrypted gateway session
             </div>
           </motion.div>
         </section>
