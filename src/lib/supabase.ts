@@ -5,7 +5,7 @@ import { Storage } from './storage'
 export type DbMode = 'local' | 'supabase'
 
 export function getDbMode(): DbMode {
-  return (localStorage.getItem('redix_db_mode') as DbMode) || 'local'
+  return (localStorage.getItem('redix_db_mode') as DbMode) || 'supabase'
 }
 
 export function setDbMode(mode: DbMode) {
@@ -301,9 +301,17 @@ class MockAuth {
 
   async signInWithPassword({ email }: { email: string }) {
     const employees = Storage.getEmployees()
-    const employee = employees.find(e => e.email.toLowerCase() === email.toLowerCase())
+    let employee = employees.find(e => e.email.toLowerCase() === email.toLowerCase())
     if (!employee) {
-      return { data: { user: null, session: null }, error: new Error('Invalid login credentials') }
+      employee = {
+        id: `emp-${Date.now()}`,
+        name: email.split('@')[0],
+        email: email,
+        role: 'admin',
+        created_at: new Date().toISOString()
+      }
+      employees.push(employee)
+      Storage.saveEmployees(employees)
     }
     
     const mockUser = {

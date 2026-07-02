@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Activity, ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, Zap, Mail, KeyRound, Loader2, CheckCircle2 } from 'lucide-react'
+import { Activity, ArrowRight, Eye, EyeOff, ShieldCheck, Sparkles, Zap, Mail, KeyRound, Loader2, CheckCircle2, Database } from 'lucide-react'
 import { useAuth } from './AuthContext'
 import { toast } from 'sonner'
+import { getDbMode, setDbMode, type DbMode } from '@/lib/supabase'
 
 export function LoginPage() {
   const { signIn, forgotPassword, employee, isLoading: authLoading } = useAuth()
@@ -13,6 +14,22 @@ export function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  const [dbMode, setDbModeState] = useState<DbMode>('supabase')
+
+  useEffect(() => {
+    setDbModeState(getDbMode())
+  }, [])
+
+  const handleToggleDbMode = () => {
+    const nextMode = dbMode === 'local' ? 'supabase' : 'local'
+    setDbMode(nextMode)
+    setDbModeState(nextMode)
+    toast.success(`Database mode switched to ${nextMode === 'supabase' ? 'Supabase Cloud' : 'Local Storage Sandbox'}! Reloading...`)
+    setTimeout(() => {
+      window.location.reload()
+    }, 1000)
+  }
 
   // Forgot password
   const [showForgot, setShowForgot] = useState(false)
@@ -327,8 +344,23 @@ export function LoginPage() {
               )}
             </AnimatePresence>
 
-            <div className="flex items-center gap-2 text-[10px] text-zinc-600 uppercase font-bold tracking-wider pt-2 border-t border-white/[0.04]">
-              <ShieldCheck className="h-4 w-4 text-zinc-600" /> Secure 256-bit encrypted gateway session
+            <div className="flex flex-col gap-2 pt-2 border-t border-white/[0.04]">
+              <div className="flex items-center justify-between text-[10px] text-zinc-500 uppercase font-bold tracking-wider">
+                <span className="flex items-center gap-1.5">
+                  <Database className="w-3.5 h-3.5 text-zinc-500" />
+                  Mode: {dbMode === 'supabase' ? 'Supabase Cloud' : 'Local Sandbox'}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleToggleDbMode}
+                  className="text-red-400 hover:text-red-300 transition-colors underline cursor-pointer font-bold"
+                >
+                  Switch to {dbMode === 'supabase' ? 'Sandbox' : 'Cloud'}
+                </button>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] text-zinc-650 uppercase font-bold tracking-wider">
+                <ShieldCheck className="h-4 w-4 text-zinc-600" /> Secure 256-bit encrypted gateway session
+              </div>
             </div>
           </motion.div>
         </section>
