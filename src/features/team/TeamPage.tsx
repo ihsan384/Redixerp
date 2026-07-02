@@ -10,8 +10,7 @@ import {
   Shield,
   X,
 } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
-import { createClient } from '@supabase/supabase-js'
+import { supabase, createClient } from '@/lib/supabase'
 import type { Employee, Call, Lead, EmployeeRole } from '@/types'
 import { EMPLOYEE_ROLE_LABELS } from '@/utils/constants'
 import { toast } from 'sonner'
