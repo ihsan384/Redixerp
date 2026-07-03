@@ -96,6 +96,7 @@ export interface Lead {
   assigned_to?: string
   assigned_employee?: Employee
   notes?: string
+  fixed_project_value?: number
   created_at: string
   updated_at: string
 }

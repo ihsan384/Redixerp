@@ -134,6 +134,18 @@ function LogRevenueModal({ isOpen, onClose, leads, onSave }: LogRevenueModalProp
     if (isOpen) setInvoiceNum(genInvoiceNumber())
   }, [leads, isOpen])
 
+  // Pre-fill fixed project value if it exists for the selected client
+  useEffect(() => {
+    if (leadId) {
+      const selectedLead = leads.find(l => l.id === leadId)
+      if (selectedLead && selectedLead.fixed_project_value !== undefined && selectedLead.fixed_project_value !== null) {
+        setTotalAmt(selectedLead.fixed_project_value.toString())
+      } else {
+        setTotalAmt('')
+      }
+    }
+  }, [leadId, leads])
+
   if (!isOpen) return null
 
   const total = parseFloat(totalAmt) || 0
@@ -159,6 +171,15 @@ function LogRevenueModal({ isOpen, onClose, leads, onSave }: LogRevenueModalProp
       }
       const { error } = await supabase.from('revenue').insert(payload as never)
       if (error) throw error
+
+      // Update fixed project value on lead if total is provided
+      if (total > 0) {
+        await supabase
+          .from('leads')
+          .update({ fixed_project_value: total })
+          .eq('id', leadId)
+      }
+
       toast.success(`Revenue logged! Balance: ${formatCurrency(balance)}`)
       onSave(); onClose()
     } catch { toast.error('Failed to save revenue record') }
@@ -462,7 +483,37 @@ function AddPartnerModal({ isOpen, onClose, onSave }: { isOpen: boolean; onClose
 
 // ─── Client Ledger Panel ──────────────────────────────────────────────────────
 
-function ClientLedger({ summary, onClose }: { summary: ClientFinancialSummary; onClose: () => void }) {
+function ClientLedger({ summary, onClose, onSave }: { summary: ClientFinancialSummary; onClose: () => void; onSave: () => void }) {
+  const [fixedVal, setFixedVal] = useState(summary.lead.fixed_project_value?.toString() || '')
+  const [updating, setUpdating] = useState(false)
+
+  useEffect(() => {
+    setFixedVal(summary.lead.fixed_project_value?.toString() || '')
+  }, [summary.lead.fixed_project_value])
+
+  const handleSaveFixedValue = async () => {
+    setUpdating(true)
+    try {
+      const val = fixedVal === '' ? null : parseFloat(fixedVal)
+      if (val !== null && isNaN(val)) {
+        toast.error('Please enter a valid number')
+        return
+      }
+      const { error } = await supabase
+        .from('leads')
+        .update({ fixed_project_value: val })
+        .eq('id', summary.lead.id)
+      
+      if (error) throw error
+      toast.success('Fixed project value updated!')
+      onSave()
+    } catch {
+      toast.error('Failed to update project value')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
   const pct = summary.totalProjectValue > 0 ? (summary.totalPaid / summary.totalProjectValue) * 100 : 0
 
   const timelineItems = [
@@ -515,6 +566,34 @@ function ClientLedger({ summary, onClose }: { summary: ClientFinancialSummary; o
             <div className="fin-progress-bar bg-emerald-500" style={{ width: `${Math.min(pct, 100)}%` }} />
           </div>
           <p className="text-[10px] text-zinc-500 mt-1">{Math.round(pct)}% collected</p>
+        </div>
+
+        {/* Fixed Project Value Settings */}
+        <div className="px-5 py-3.5 border-b border-white/[0.06] bg-white/[0.01] flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <label className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold block">Fixed Project Value</label>
+            <p className="text-[10px] text-zinc-400 mt-0.5 truncate">
+              {summary.lead.fixed_project_value !== null && summary.lead.fixed_project_value !== undefined
+                ? `Locked at ${formatCurrency(summary.lead.fixed_project_value)}`
+                : 'Dynamic (calculated from payments)'}
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <input
+              type="number"
+              value={fixedVal}
+              onChange={e => setFixedVal(e.target.value)}
+              placeholder="Set fixed value"
+              className="w-28 h-8 text-xs px-2.5 bg-[#151515] border border-white/[0.08] text-white rounded-lg focus:outline-none focus:border-red-500"
+            />
+            <button
+              onClick={handleSaveFixedValue}
+              disabled={updating}
+              className="btn-primary h-8 px-3 text-xs font-bold rounded-lg"
+            >
+              {updating ? '...' : 'Set'}
+            </button>
+          </div>
         </div>
 
         {/* Timeline */}
@@ -654,7 +733,7 @@ export function RevenuePage() {
   const [isLogRevenueOpen, setIsLogRevenueOpen] = useState(false)
   const [isAddInvoiceOpen, setIsAddInvoiceOpen] = useState(false)
   const [isAddPartnerOpen, setIsAddPartnerOpen] = useState(false)
-  const [selectedClientSummary, setSelectedClientSummary] = useState<ClientFinancialSummary | null>(null)
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
     try {
@@ -679,6 +758,36 @@ export function RevenuePage() {
 
   useEffect(() => { loadData() }, [loadData])
 
+  // ─ Client Accounts / Summaries ─────────────────────────────────────────────
+
+  const clientSummaries: ClientFinancialSummary[] = leads
+    .filter(l => revenues.some(r => r.lead_id === l.id) || invoices.some(inv => inv.lead_id === l.id))
+    .map(lead => {
+      const txns = revenues.filter(r => r.lead_id === lead.id)
+      const invs = invoices.filter(inv => inv.lead_id === lead.id)
+      const totalProjectValue = lead.fixed_project_value !== null && lead.fixed_project_value !== undefined
+        ? Number(lead.fixed_project_value)
+        : (txns.reduce((s, r) => s + (r.total_project_amount || r.amount), 0) || invs.reduce((s, inv) => s + inv.total_amount, 0))
+      const totalPaid = txns.reduce((s, r) => s + r.amount, 0)
+      const remainingBalance = Math.max(0, totalProjectValue - totalPaid)
+      const lastTxn = txns.sort((a, b) => new Date(b.received_date).getTime() - new Date(a.received_date).getTime())[0]
+      const dueDate = txns.find(r => r.due_date)?.due_date
+      return {
+        lead, totalProjectValue, totalPaid, remainingBalance,
+        lastPaymentDate: lastTxn?.received_date,
+        dueDate, transactions: txns, invoices: invs,
+        paymentStatus: calcPaymentStatus(totalPaid, totalProjectValue, dueDate),
+      }
+    })
+
+  const activeSummary = clientSummaries.find(s => s.lead.id === selectedClientId)
+
+  const filteredClients = clientSummaries.filter(s => {
+    const matchSearch = !searchQuery || s.lead.shop_name.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchStatus = statusFilter === 'all' || s.paymentStatus === statusFilter
+    return matchSearch && matchStatus
+  })
+
   // ─ Core Calculations ───────────────────────────────────────────────────────
 
   const now = new Date()
@@ -687,8 +796,8 @@ export function RevenuePage() {
   const collectedRevenue = revenues.filter(r => r.payment_status === 'paid').reduce((s, r) => s + r.amount, 0)
   const allPaidRevenue = revenues.reduce((s, r) => s + r.amount, 0)
 
-  // Gross = sum of total_project_amount if available, else amount
-  const grossRevenue = revenues.reduce((s, r) => s + (r.total_project_amount || r.amount), 0)
+  // Gross = sum of client project values
+  const grossRevenue = clientSummaries.reduce((s, c) => s + c.totalProjectValue, 0)
   const outstandingBalance = Math.max(0, grossRevenue - allPaidRevenue)
 
   const monthlyExpenses = expenses
@@ -716,32 +825,6 @@ export function RevenuePage() {
     { label: 'Overdue Invoices', val: overdueInvoices, isCount: true, icon: <AlertCircle className="w-5 h-5" />, color: '#ef4444', accent: 'bg-red-500/10 border-red-500/20 text-red-400' },
     { label: 'Invoices This Month', val: invoicesThisMonth, isCount: true, icon: <FileText className="w-5 h-5" />, color: '#06b6d4', accent: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400' },
   ]
-
-  // ─ Client Accounts ─────────────────────────────────────────────────────────
-
-  const clientSummaries: ClientFinancialSummary[] = leads
-    .filter(l => revenues.some(r => r.lead_id === l.id) || invoices.some(inv => inv.lead_id === l.id))
-    .map(lead => {
-      const txns = revenues.filter(r => r.lead_id === lead.id)
-      const invs = invoices.filter(inv => inv.lead_id === lead.id)
-      const totalProjectValue = txns.reduce((s, r) => s + (r.total_project_amount || r.amount), 0) || invs.reduce((s, inv) => s + inv.total_amount, 0)
-      const totalPaid = txns.reduce((s, r) => s + r.amount, 0)
-      const remainingBalance = Math.max(0, totalProjectValue - totalPaid)
-      const lastTxn = txns.sort((a, b) => new Date(b.received_date).getTime() - new Date(a.received_date).getTime())[0]
-      const dueDate = txns.find(r => r.due_date)?.due_date
-      return {
-        lead, totalProjectValue, totalPaid, remainingBalance,
-        lastPaymentDate: lastTxn?.received_date,
-        dueDate, transactions: txns, invoices: invs,
-        paymentStatus: calcPaymentStatus(totalPaid, totalProjectValue, dueDate),
-      }
-    })
-
-  const filteredClients = clientSummaries.filter(s => {
-    const matchSearch = !searchQuery || s.lead.shop_name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchStatus = statusFilter === 'all' || s.paymentStatus === statusFilter
-    return matchSearch && matchStatus
-  })
 
   // ─ Chart Data ─────────────────────────────────────────────────────────────
 
@@ -1037,7 +1120,7 @@ export function RevenuePage() {
                         </div>
                       </div>
                       <button
-                        onClick={() => setSelectedClientSummary(summary)}
+                        onClick={() => setSelectedClientId(summary.lead.id)}
                         className="w-full mt-3 btn-ghost h-8 text-xs gap-1.5"
                       >
                         <Eye className="w-3.5 h-3.5" /> View Ledger
@@ -1356,8 +1439,8 @@ export function RevenuePage() {
       <LogRevenueModal isOpen={isLogRevenueOpen} onClose={() => setIsLogRevenueOpen(false)} leads={leads} onSave={loadData} />
       <AddInvoiceModal isOpen={isAddInvoiceOpen} onClose={() => setIsAddInvoiceOpen(false)} leads={leads} onSave={loadData} />
       <AddPartnerModal isOpen={isAddPartnerOpen} onClose={() => setIsAddPartnerOpen(false)} onSave={loadData} />
-      {selectedClientSummary && (
-        <ClientLedger summary={selectedClientSummary} onClose={() => setSelectedClientSummary(null)} />
+      {selectedClientId && activeSummary && (
+        <ClientLedger summary={activeSummary} onClose={() => setSelectedClientId(null)} onSave={loadData} />
       )}
     </div>
   )
