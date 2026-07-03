@@ -14,7 +14,7 @@ import {
   ComposedChart, Line,
 } from 'recharts'
 import { supabase } from '@/lib/supabase'
-import type { Lead, Revenue, Expense, Invoice, Partner, ClientFinancialSummary, PaymentStatus, PaymentMethod, InvoiceStatus } from '@/types'
+import type { Lead, Revenue, Expense, Invoice, Partner, ClientFinancialSummary, PaymentStatus, PaymentMethod, InvoiceStatus, PartnerPayout } from '@/types'
 import { formatCurrency } from '@/utils/format'
 import { PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, PAYMENT_METHOD_LABELS, EXPENSE_CATEGORY_LABELS } from '@/utils/constants'
 import { toast } from 'sonner'
@@ -626,6 +626,183 @@ function ClientLedger({ summary, onClose, onSave }: { summary: ClientFinancialSu
   )
 }
 
+// ─── Partner Ledger Panel ──────────────────────────────────────────────────────
+
+interface PartnerLedgerProps {
+  partner: Partner
+  shareAmt: number
+  payouts: PartnerPayout[]
+  onClose: () => void
+  onSave: () => void
+}
+
+function PartnerLedger({ partner, shareAmt, payouts, onClose, onSave }: PartnerLedgerProps) {
+  const [amt, setAmt] = useState('')
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [notes, setNotes] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const totalPaid = payouts.reduce((sum, p) => sum + p.amount, 0)
+  const remaining = Math.max(0, shareAmt - totalPaid)
+  const pct = shareAmt > 0 ? (totalPaid / shareAmt) * 100 : 0
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const parsedAmt = parseFloat(amt)
+    if (!parsedAmt || parsedAmt <= 0) {
+      toast.error('Please enter a valid amount')
+      return
+    }
+    setSaving(true)
+    try {
+      const { error } = await supabase.from('partner_payouts').insert({
+        partner_id: partner.id,
+        amount: parsedAmt,
+        paid_date: date,
+        notes: notes || null,
+        status: 'paid'
+      } as never)
+      if (error) throw error
+      toast.success('Payout recorded successfully!')
+      setAmt('')
+      setNotes('')
+      onSave()
+    } catch {
+      toast.error('Failed to log partner payout')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this payout record?')) return
+    try {
+      const { error } = await supabase.from('partner_payouts').delete().eq('id', id)
+      if (error) throw error
+      toast.success('Payout record deleted')
+      onSave()
+    } catch {
+      toast.error('Failed to delete payout record')
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div onClick={onClose} className="modal-backdrop" />
+      <div className="modal-panel z-10 w-full max-w-lg overflow-hidden flex flex-col" style={{ maxHeight: '85vh' }}>
+        <div className="flex items-center justify-between p-5 border-b border-white/[0.06] shrink-0">
+          <div>
+            <h3 className="text-sm font-bold text-white">{partner.name}</h3>
+            <p className="text-[11px] text-zinc-500 mt-0.5">Partner Payout Ledger</p>
+          </div>
+          <button onClick={onClose} className="icon-btn w-8 h-8"><X className="w-4 h-4" /></button>
+        </div>
+
+        {/* Running Balance */}
+        <div className="grid grid-cols-3 gap-0 border-b border-white/[0.06] shrink-0">
+          {[
+            { label: 'Total Share', val: shareAmt, color: 'text-white' },
+            { label: 'Total Paid', val: totalPaid, color: 'text-emerald-400' },
+            { label: 'Remaining', val: remaining, color: 'text-yellow-400' },
+          ].map((item, i) => (
+            <div key={i} className={`p-4 text-center ${i < 2 ? 'border-r border-white/[0.06]' : ''}`}>
+              <p className="text-[10px] text-zinc-500 uppercase tracking-wider">{item.label}</p>
+              <p className={`text-base font-bold mt-1 ${item.color}`}>{formatCurrency(item.val)}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Progress */}
+        <div className="px-5 py-3 border-b border-white/[0.06] shrink-0">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Payout Completion</span>
+            <span className="text-xs font-bold text-emerald-400">{Math.round(pct)}%</span>
+          </div>
+          <div className="fin-progress-wrap">
+            <div className="fin-progress-bar bg-emerald-500" style={{ width: `${Math.min(pct, 100)}%` }} />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          {/* Record Payout Form */}
+          <form onSubmit={handleSubmit} className="border border-white/[0.06] bg-white/[0.01] rounded-2xl p-4 space-y-3">
+            <h4 className="text-[10px] font-bold text-white uppercase tracking-wider">Record New Payout</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[9px] text-zinc-400 uppercase tracking-wider font-bold">Amount *</label>
+                <input
+                  type="number"
+                  value={amt}
+                  onChange={e => setAmt(e.target.value)}
+                  placeholder="e.g. 1000"
+                  className="w-full h-8 text-xs px-2.5 bg-[#151515] border border-white/[0.08] text-white rounded-lg focus:outline-none focus:border-red-500"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] text-zinc-400 uppercase tracking-wider font-bold">Date *</label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={e => setDate(e.target.value)}
+                  className="w-full h-8 text-xs px-2.5 bg-[#151515] border border-white/[0.08] text-white rounded-lg focus:outline-none focus:border-red-500"
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[9px] text-zinc-400 uppercase tracking-wider font-bold">Notes</label>
+              <input
+                type="text"
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="e.g. UPI, bank transfer ref"
+                className="w-full h-8 text-xs px-2.5 bg-[#151515] border border-white/[0.08] text-white rounded-lg focus:outline-none focus:border-red-500"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={saving}
+              className="w-full btn-primary h-8 text-xs font-bold rounded-lg"
+            >
+              {saving ? 'Recording...' : 'Record Payout'}
+            </button>
+          </form>
+
+          {/* Payouts list */}
+          <div className="space-y-3">
+            <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Payout History</h4>
+            {payouts.length === 0 ? (
+              <p className="text-xs text-zinc-600 italic">No payouts logged yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {payouts.map(p => (
+                  <div key={p.id} className="flex items-center justify-between p-3 rounded-xl border border-white/[0.04] bg-white/[0.01]">
+                    <div>
+                      <p className="text-xs font-bold text-emerald-400">{formatCurrency(p.amount)}</p>
+                      {p.notes && <p className="text-[10px] text-zinc-500 mt-0.5">{p.notes}</p>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-zinc-500 font-mono">{p.paid_date}</span>
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="text-red-400/60 hover:text-red-400 p-1"
+                        title="Delete record"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── PDF Invoice Generator ────────────────────────────────────────────────────
 
 async function downloadInvoicePDF(invoice: Invoice & { lead?: Lead }) {
@@ -725,6 +902,7 @@ export function RevenuePage() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [partners, setPartners] = useState<Partner[]>([])
+  const [payouts, setPayouts] = useState<PartnerPayout[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -734,15 +912,17 @@ export function RevenuePage() {
   const [isAddInvoiceOpen, setIsAddInvoiceOpen] = useState(false)
   const [isAddPartnerOpen, setIsAddPartnerOpen] = useState(false)
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
     try {
-      const [revsRes, leadsRes, expsRes, invsRes, partnersRes] = await Promise.all([
+      const [revsRes, leadsRes, expsRes, invsRes, partnersRes, payoutsRes] = await Promise.all([
         supabase.from('revenue').select('*').order('received_date', { ascending: false }),
         supabase.from('leads').select('*').order('shop_name'),
         supabase.from('expenses').select('*').order('date', { ascending: false }),
         supabase.from('invoices').select('*').order('created_at', { ascending: false }).limit(100),
         supabase.from('partners').select('*').order('name'),
+        supabase.from('partner_payouts').select('*').order('paid_date', { ascending: false }),
       ])
       setRevenues((revsRes.data || []) as Revenue[])
       setLeads((leadsRes.data || []) as Lead[])
@@ -750,6 +930,7 @@ export function RevenuePage() {
       // invoices table may not exist yet — handle gracefully
       if (!invsRes.error) setInvoices((invsRes.data || []) as Invoice[])
       if (!partnersRes.error) setPartners((partnersRes.data || []) as Partner[])
+      if (!payoutsRes.error) setPayouts((payoutsRes.data || []) as PartnerPayout[])
     } catch (e) {
       console.error(e)
       toast.error('Failed to load finance data')
@@ -811,8 +992,9 @@ export function RevenuePage() {
 
   // Partner share pending
   const partnerSharePending = partners.reduce((sum, p) => {
-    const share = p.share_percentage > 0 ? (netProfit * p.share_percentage / 100) : (p.share_fixed || 0)
-    return sum + Math.max(0, share)
+    const share = p.share_percentage > 0 ? Math.max(0, netProfit * p.share_percentage / 100) : (p.share_fixed || 0)
+    const paid = payouts.filter(po => po.partner_id === p.id).reduce((s, po) => s + po.amount, 0)
+    return sum + Math.max(0, share - paid)
   }, 0)
 
   const kpiCards = [
@@ -1340,6 +1522,10 @@ export function RevenuePage() {
                   ? Math.max(0, netProfit * partner.share_percentage / 100)
                   : (partner.share_fixed || 0)
                 const pct = partner.share_percentage > 0 ? partner.share_percentage : 0
+                const partnerPayouts = payouts.filter(p => p.partner_id === partner.id)
+                const totalPaid = partnerPayouts.reduce((sum, p) => sum + p.amount, 0)
+                const remaining = Math.max(0, shareAmt - totalPaid)
+                const payoutPct = shareAmt > 0 ? (totalPaid / shareAmt) * 100 : 0
                 return (
                   <div key={partner.id} className="fin-partner-card">
                     <div className="flex items-start justify-between mb-4">
@@ -1357,24 +1543,38 @@ export function RevenuePage() {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3">
-                        <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Share %</p>
-                        <p className="text-lg font-bold text-white mt-0.5">{pct}%</p>
-                      </div>
-                      <div className="rounded-xl bg-emerald-500/[0.05] border border-emerald-500/[0.12] p-3">
-                        <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Share Amount</p>
-                        <p className="text-lg font-bold text-emerald-400 mt-0.5">{formatCurrency(shareAmt)}</p>
-                      </div>
+                    <div className="grid grid-cols-3 gap-0 border border-white/[0.06] rounded-xl overflow-hidden mb-4">
+                      {[
+                        { label: 'Total Share', val: shareAmt, color: 'text-white' },
+                        { label: 'Paid', val: totalPaid, color: 'text-emerald-400' },
+                        { label: 'Remaining', val: remaining, color: 'text-yellow-400' },
+                      ].map((item, i) => (
+                        <div key={i} className={`p-2.5 text-center ${i < 2 ? 'border-r border-white/[0.06]' : ''} bg-white/[0.01]`}>
+                          <p className="text-[9px] text-zinc-500 uppercase tracking-wider">{item.label}</p>
+                          <p className={`text-xs font-bold mt-0.5 ${item.color}`}>{formatCurrency(item.val)}</p>
+                        </div>
+                      ))}
                     </div>
 
-                    {pct > 0 && (
-                      <div className="fin-progress-wrap mb-4">
-                        <div className="fin-progress-bar bg-red-500" style={{ width: `${pct}%` }} />
+                    {shareAmt > 0 && (
+                      <div className="mb-4">
+                        <div className="flex justify-between items-center text-[9px] text-zinc-500 mb-1">
+                          <span>Payout Completion</span>
+                          <span className="font-bold text-zinc-400">{Math.round(payoutPct)}%</span>
+                        </div>
+                        <div className="fin-progress-wrap" style={{ marginTop: 0 }}>
+                          <div className="fin-progress-bar bg-emerald-500" style={{ width: `${Math.min(100, payoutPct)}%` }} />
+                        </div>
                       </div>
                     )}
 
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => setSelectedPartnerId(partner.id)}
+                        className="flex-1 btn-primary h-8 text-xs font-bold gap-1.5"
+                      >
+                        <Banknote className="w-3.5 h-3.5" /> Payout Ledger
+                      </button>
                       <button
                         onClick={async () => {
                           const newStatus = !partner.is_active
@@ -1382,7 +1582,7 @@ export function RevenuePage() {
                           toast.success(`${partner.name} marked ${newStatus ? 'active' : 'inactive'}`)
                           loadData()
                         }}
-                        className="flex-1 btn-secondary h-8 text-xs font-bold"
+                        className="btn-secondary h-8 text-xs font-bold px-3"
                       >
                         {partner.is_active ? 'Deactivate' : 'Activate'}
                       </button>
@@ -1441,6 +1641,25 @@ export function RevenuePage() {
       <AddPartnerModal isOpen={isAddPartnerOpen} onClose={() => setIsAddPartnerOpen(false)} onSave={loadData} />
       {selectedClientId && activeSummary && (
         <ClientLedger summary={activeSummary} onClose={() => setSelectedClientId(null)} onSave={loadData} />
+      )}
+      {selectedPartnerId && (
+        (() => {
+          const partner = partners.find(p => p.id === selectedPartnerId)
+          if (!partner) return null
+          const shareAmt = partner.share_percentage > 0
+            ? Math.max(0, netProfit * partner.share_percentage / 100)
+            : (partner.share_fixed || 0)
+          const partnerPayouts = payouts.filter(p => p.partner_id === selectedPartnerId)
+          return (
+            <PartnerLedger
+              partner={partner}
+              shareAmt={shareAmt}
+              payouts={partnerPayouts}
+              onClose={() => setSelectedPartnerId(null)}
+              onSave={loadData}
+            />
+          )
+        })()
       )}
     </div>
   )
