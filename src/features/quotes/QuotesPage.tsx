@@ -87,7 +87,7 @@ export function QuotesPage() {
                   <option value="accepted">Accepted</option>
                   <option value="rejected">Rejected</option>
                 </select>
-                <span className="text-[10px] text-zinc-500">{new Date(q.created_at).toLocaleDateString()}</span>
+                <span className="text-[10px] text-zinc-500">{q.created_at ? new Date(q.created_at).toLocaleDateString() : 'N/A'}</span>
               </div>
             </div>
           ))}

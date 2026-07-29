@@ -273,10 +273,12 @@ export function MessagesPage() {
                         )}
                       </div>
                       <span className="text-[10px] text-zinc-500">
-                        {new Date(msg.created_at).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
+                        {msg.created_at
+                          ? new Date(msg.created_at).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                            })
+                          : ''}
                       </span>
                     </div>
 
