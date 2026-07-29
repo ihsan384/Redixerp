@@ -28,6 +28,10 @@ export function DashboardPage() {
   const [activities, setActivities] = useState<Activity[]>([])
   const [revenues, setRevenues] = useState<Revenue[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
+  const [messagesCount, setMessagesCount] = useState(0)
+  const [pendingReviewsCount, setPendingReviewsCount] = useState(0)
+  const [activeProjectsCount, setActiveProjectsCount] = useState(0)
+  const [quotesCount, setQuotesCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
 
   const loadDashboardData = async () => {
@@ -38,12 +42,20 @@ export function DashboardPage() {
         { data: activitiesData },
         { data: revenuesData },
         { data: expensesData },
+        { data: msgData },
+        { data: revData },
+        { data: projData },
+        { data: quoteData },
       ] = await Promise.all([
         supabase.from('leads').select('*'),
         supabase.from('calls').select('*'),
         supabase.from('activities').select('*'),
         supabase.from('revenue').select('*'),
         supabase.from('expenses').select('*'),
+        supabase.from('messages').select('*').eq('status', 'unread'),
+        supabase.from('client_reviews').select('*').eq('status', 'pending'),
+        supabase.from('projects').select('*'),
+        supabase.from('quotes').select('*'),
       ])
 
       setLeads((leadsData || []) as Lead[])
@@ -51,6 +63,10 @@ export function DashboardPage() {
       setActivities((activitiesData || []) as Activity[])
       setRevenues((revenuesData || []) as Revenue[])
       setExpenses((expensesData || []) as Expense[])
+      setMessagesCount(msgData?.length || 0)
+      setPendingReviewsCount(revData?.length || 0)
+      setActiveProjectsCount(projData?.length || 0)
+      setQuotesCount(quoteData?.length || 0)
     } catch (e) {
       console.error(e)
       toast.error('Failed to load dashboard data')
@@ -58,6 +74,7 @@ export function DashboardPage() {
       setIsLoading(false)
     }
   }
+
 
   useEffect(() => {
     loadDashboardData()

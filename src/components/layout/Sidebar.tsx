@@ -23,6 +23,11 @@ import {
   Quote,
   LayoutTemplate,
   RefreshCw,
+  Wallet,
+  Inbox,
+  Star,
+  Contact as ContactIcon,
+  FolderKanban,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { cn } from '@/utils/cn'
@@ -45,16 +50,27 @@ const iconMap = {
   Quote,
   LayoutTemplate,
   RefreshCw,
+  Wallet,
+  Inbox,
+  Star,
+  ContactIcon,
+  FolderKanban,
 } as const
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard' as const, path: '/' },
+  { id: 'messages', label: 'Messages Inbox', icon: 'Inbox' as const, path: '/messages' },
+  { id: 'reviews', label: 'Reviews', icon: 'Star' as const, path: '/reviews' },
   { id: 'leads', label: 'Leads', icon: 'Users' as const, path: '/leads' },
+  { id: 'contacts', label: 'Contacts', icon: 'ContactIcon' as const, path: '/contacts' },
+  { id: 'clients', label: 'Clients', icon: 'Briefcase' as const, path: '/clients' },
+  { id: 'projects', label: 'Projects', icon: 'FolderKanban' as const, path: '/projects' },
+  { id: 'quotes', label: 'Quotes', icon: 'Quote' as const, path: '/quotes' },
   { id: 'call-center', label: 'Call Center', icon: 'Phone' as const, path: '/call-center' },
   { id: 'call-history', label: 'Call History', icon: 'History' as const, path: '/call-history' },
   { id: 'followups', label: 'Follow Ups', icon: 'CalendarClock' as const, path: '/follow-ups' },
-  { id: 'clients', label: 'Clients', icon: 'Briefcase' as const, path: '/clients' },
   { id: 'revenue', label: 'Revenue', icon: 'TrendingUp' as const, path: '/revenue' },
+  { id: 'balance', label: 'Balance', icon: 'Wallet' as const, path: '/balance' },
   { id: 'expenses', label: 'Expenses', icon: 'Receipt' as const, path: '/expenses' },
   { id: 'reports', label: 'Reports', icon: 'BarChart3' as const, path: '/reports' },
   { id: 'team', label: 'Team', icon: 'UserCheck' as const, path: '/team' },
@@ -62,27 +78,32 @@ const navItems = [
 ]
 
 const billingSubItems = [
-  { id: 'billing-invoices',   label: 'Invoices',   icon: 'FileText'      as const, path: '/billing/invoices'   },
+  { id: 'billing-invoices', label: 'Invoices', icon: 'FileText' as const, path: '/billing/invoices' },
   { id: 'billing-agreements', label: 'Agreements', icon: 'FileSignature' as const, path: '/billing/agreements' },
-  { id: 'billing-quotations', label: 'Quotations', icon: 'Quote'         as const, path: '/billing/quotations' },
-  { id: 'billing-templates',  label: 'Templates',  icon: 'LayoutTemplate'as const, path: '/billing/templates'  },
-  { id: 'billing-recurring',  label: 'Recurring',  icon: 'RefreshCw'     as const, path: '/billing/recurring'  },
+  { id: 'billing-quotations', label: 'Quotations', icon: 'Quote' as const, path: '/billing/quotations' },
+  { id: 'billing-templates', label: 'Templates', icon: 'LayoutTemplate' as const, path: '/billing/templates' },
+  { id: 'billing-recurring', label: 'Recurring', icon: 'RefreshCw' as const, path: '/billing/recurring' },
 ]
 
 const navSections = [
   {
-    title: 'Operations',
-    itemIds: ['dashboard', 'leads', 'call-center', 'call-history', 'followups', 'clients'],
+    title: 'Ecosystem & Inbox',
+    itemIds: ['dashboard', 'messages', 'reviews'],
   },
   {
-    title: 'Finance',
-    itemIds: ['revenue', 'expenses', 'reports'],
+    title: 'CRM & Clients',
+    itemIds: ['leads', 'contacts', 'clients', 'projects', 'quotes'],
   },
   {
-    title: 'Management',
-    itemIds: ['team', 'settings'],
+    title: 'Call Center',
+    itemIds: ['call-center', 'call-history', 'followups'],
+  },
+  {
+    title: 'Finance & Management',
+    itemIds: ['revenue', 'balance', 'expenses', 'reports', 'team', 'settings'],
   },
 ]
+
 
 interface SidebarProps {
   mobileOpen?: boolean

@@ -230,7 +230,7 @@ export function CallHistoryPage() {
 
   // ── Load Employees ─────────────────────────────────────────
   useEffect(() => {
-    supabase.from('employees').select('*').then(({ data }) => { if (data) setEmployees(data as Employee[]) })
+    supabase.from('employees').select('*').then(({ data }: { data: any }): void => { if (data) setEmployees(data as Employee[]) })
   }, [])
 
   // ── Fetch Calls ────────────────────────────────────────────

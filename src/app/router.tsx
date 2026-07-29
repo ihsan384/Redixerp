@@ -16,6 +16,13 @@ import { ReportsPage } from '@/features/reports/ReportsPage'
 import { TeamPage } from '@/features/team/TeamPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { AboutPage } from '@/features/about/AboutPage'
+import { BalancePage } from '@/features/balance/BalancePage'
+
+import { MessagesPage } from '@/features/messages/MessagesPage'
+import { ReviewsPage } from '@/features/reviews/ReviewsPage'
+import { ContactsPage } from '@/features/contacts/ContactsPage'
+import { ProjectsPage } from '@/features/projects/ProjectsPage'
+import { QuotesPage } from '@/features/quotes/QuotesPage'
 
 // Billing Module
 import { BillingLayout } from '@/features/billing/BillingLayout'
@@ -67,17 +74,23 @@ export function AppRoutes() {
         }
       >
         <Route index element={<DashboardPage />} />
+        <Route path="messages" element={<MessagesPage />} />
+        <Route path="reviews" element={<ReviewsPage />} />
         <Route path="leads" element={<LeadsPage />} />
+        <Route path="contacts" element={<ContactsPage />} />
+        <Route path="clients" element={<ClientsPage />} />
+        <Route path="projects" element={<ProjectsPage />} />
+        <Route path="quotes" element={<QuotesPage />} />
         <Route path="call-center" element={<CallCenterPage />} />
         <Route path="call-history" element={<CallHistoryPage />} />
         <Route path="follow-ups" element={<FollowUpsPage />} />
-        <Route path="clients" element={<ClientsPage />} />
         <Route path="revenue" element={<RevenuePage />} />
         <Route path="expenses" element={<ExpensesPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="team" element={<TeamPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="about" element={<AboutPage />} />
+        <Route path="balance" element={<BalancePage />} />
 
         {/* Billing Module */}
         <Route path="billing" element={<BillingLayout />}>
@@ -94,4 +107,5 @@ export function AppRoutes() {
     </Routes>
   )
 }
+
 

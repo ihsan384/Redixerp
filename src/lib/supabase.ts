@@ -61,6 +61,15 @@ class MockBuilder {
       case 'client_files': return Storage.getClientFiles()
       case 'client_timeline': return Storage.getClientTimeline()
       case 'client_questionnaire': return Storage.getClientQuestionnaire()
+      case 'messages': return Storage.getMessages()
+      case 'contacts': return Storage.getContacts()
+      case 'projects': return Storage.getProjects()
+      case 'quotes': return Storage.getQuotes()
+      case 'invoices': return Storage.getInvoices()
+      case 'client_reviews': return Storage.getClientReviews()
+      case 'review_requests': return Storage.getReviewRequests()
+      case 'newsletter_subscribers': return Storage.getNewsletterSubscribers()
+      case 'notifications': return Storage.getNotifications()
       default: return []
     }
   }
@@ -78,8 +87,18 @@ class MockBuilder {
       case 'client_files': Storage.saveClientFiles(data); break
       case 'client_timeline': Storage.saveClientTimeline(data); break
       case 'client_questionnaire': Storage.saveClientQuestionnaire(data); break
+      case 'messages': Storage.saveMessages(data); break
+      case 'contacts': Storage.saveContacts(data); break
+      case 'projects': Storage.saveProjects(data); break
+      case 'quotes': Storage.saveQuotes(data); break
+      case 'invoices': Storage.saveInvoices(data); break
+      case 'client_reviews': Storage.saveClientReviews(data); break
+      case 'review_requests': Storage.saveReviewRequests(data); break
+      case 'newsletter_subscribers': Storage.saveNewsletterSubscribers(data); break
+      case 'notifications': Storage.saveNotifications(data); break
     }
   }
+
 
   select(columns?: string) {
     return this

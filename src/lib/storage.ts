@@ -197,6 +197,16 @@ export const Storage = {
   getClientTimeline: () => getStorageItem<ClientTimelineEvent[]>('redix_client_timeline', INITIAL_CLIENT_TIMELINE),
   getClientQuestionnaire: () => getStorageItem<RequirementQuestionnaireData[]>('redix_client_questionnaire', INITIAL_CLIENT_QUESTIONNAIRE),
 
+  getMessages: () => getStorageItem<any[]>('redix_messages', []),
+  getContacts: () => getStorageItem<any[]>('redix_contacts', []),
+  getProjects: () => getStorageItem<any[]>('redix_projects', []),
+  getQuotes: () => getStorageItem<any[]>('redix_quotes', []),
+  getInvoices: () => getStorageItem<any[]>('redix_invoices', []),
+  getClientReviews: () => getStorageItem<any[]>('redix_client_reviews', []),
+  getReviewRequests: () => getStorageItem<any[]>('redix_review_requests', []),
+  getNewsletterSubscribers: () => getStorageItem<any[]>('redix_newsletter_subscribers', []),
+  getNotifications: () => getStorageItem<any[]>('redix_notifications', []),
+
   saveLeads: (leads: Lead[]) => setStorageItem('redix_leads', leads),
   saveCalls: (calls: Call[]) => setStorageItem('redix_calls', calls),
   saveActivities: (activities: Activity[]) => setStorageItem('redix_activities', activities),
@@ -208,5 +218,16 @@ export const Storage = {
   saveClientNotes: (notes: ClientNote[]) => setStorageItem('redix_client_notes', notes),
   saveClientFiles: (files: ClientFile[]) => setStorageItem('redix_client_files', files),
   saveClientTimeline: (timeline: ClientTimelineEvent[]) => setStorageItem('redix_client_timeline', timeline),
-  saveClientQuestionnaire: (q: RequirementQuestionnaireData[]) => setStorageItem('redix_client_questionnaire', q)
+  saveClientQuestionnaire: (q: RequirementQuestionnaireData[]) => setStorageItem('redix_client_questionnaire', q),
+
+  saveMessages: (messages: any[]) => setStorageItem('redix_messages', messages),
+  saveContacts: (contacts: any[]) => setStorageItem('redix_contacts', contacts),
+  saveProjects: (projects: any[]) => setStorageItem('redix_projects', projects),
+  saveQuotes: (quotes: any[]) => setStorageItem('redix_quotes', quotes),
+  saveInvoices: (invoices: any[]) => setStorageItem('redix_invoices', invoices),
+  saveClientReviews: (reviews: any[]) => setStorageItem('redix_client_reviews', reviews),
+  saveReviewRequests: (requests: any[]) => setStorageItem('redix_review_requests', requests),
+  saveNewsletterSubscribers: (subscribers: any[]) => setStorageItem('redix_newsletter_subscribers', subscribers),
+  saveNotifications: (notifications: any[]) => setStorageItem('redix_notifications', notifications)
 }
+

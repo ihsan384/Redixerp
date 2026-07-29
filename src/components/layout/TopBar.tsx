@@ -10,18 +10,31 @@ import {
   Plus,
   Search,
   Sun,
+  Check,
+  CheckCheck,
+  Inbox,
+  Star,
+  Quote as QuoteIcon,
+  UserCheck,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { SearchDialog } from './SearchDialog'
 import { cn } from '@/utils/cn'
+import { supabase } from '@/lib/supabase'
+import type { Notification } from '@/types/database.types'
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'Overview',
+  '/messages': 'Messages Inbox',
+  '/reviews': 'Review Moderation',
   '/leads': 'Leads',
+  '/contacts': 'Contacts',
+  '/clients': 'Clients',
+  '/projects': 'Projects',
+  '/quotes': 'Quotes',
   '/call-center': 'Call Center',
   '/call-history': 'Call History',
   '/follow-ups': 'Follow Ups',
-  '/clients': 'Clients',
   '/revenue': 'Revenue',
   '/expenses': 'Expenses',
   '/reports': 'Reports',
@@ -40,6 +53,53 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [clock, setClock] = useState(new Date())
   const [midnightTheme, setMidnightTheme] = useState(() => localStorage.getItem('redix_theme') === 'midnight')
+
+  // Real-time Notifications State
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [notifOpen, setNotifOpen] = useState(false)
+
+  const fetchNotifications = async () => {
+    try {
+      const { data } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20)
+      setNotifications(data || [])
+    } catch (err) {
+      console.error('Fetch notifications error:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchNotifications()
+
+    const channel = supabase
+      .channel('realtime:notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
+        setNotifications((prev) => [payload.new as Notification, ...prev])
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  const handleToggleRead = async (id: string, currentRead: boolean) => {
+    const updated = notifications.map((n) => (n.id === id ? { ...n, read: !currentRead } : n))
+    setNotifications(updated)
+    await supabase.from('notifications').update({ read: !currentRead }).eq('id', id)
+  }
+
+  const handleMarkAllRead = async () => {
+    const updated = notifications.map((n) => ({ ...n, read: true }))
+    setNotifications(updated)
+    await supabase.from('notifications').update({ read: true }).neq('id', '00000000-0000-0000-0000-000000000000')
+  }
+
+  const unreadCount = notifications.filter((n) => !n.read).length
+
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -133,15 +193,90 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
             {midnightTheme ? <Sun className="h-4.5 w-4.5" /> : <Moon className="h-4.5 w-4.5" />}
           </button>
 
-          {/* Notifications Notification system */}
-          <button
-            aria-label="Notifications system alerts"
-            title="Workspace Alerts"
-            className="icon-btn h-11 w-11 rounded-xl relative"
-          >
-            <Bell className="h-4.5 w-4.5" />
-            <span className="absolute right-3.5 top-3.5 h-2 w-2 rounded-full border border-[#111111] bg-red-500 shadow-[0_0_8px_rgba(229,57,53,0.8)]" />
-          </button>
+          {/* Notifications System */}
+          <div className="relative">
+            <button
+              onClick={() => setNotifOpen(!notifOpen)}
+              aria-label="Notifications system alerts"
+              title="Workspace Alerts"
+              className="icon-btn h-11 w-11 rounded-xl relative"
+            >
+              <Bell className="h-4.5 w-4.5" />
+              {unreadCount > 0 && (
+                <span className="absolute right-2.5 top-2.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-[0_0_8px_rgba(229,57,53,0.8)]">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* Notifications Dropdown Panel */}
+            {notifOpen && (
+              <div className="absolute right-0 top-14 z-50 w-80 sm:w-96 rounded-2xl border border-white/10 bg-[#111111] shadow-2xl overflow-hidden divide-y divide-white/10 text-xs">
+                <div className="flex items-center justify-between p-4 bg-white/[0.02]">
+                  <div className="flex items-center gap-2 font-bold text-white">
+                    <Bell className="h-4 w-4 text-red-400" />
+                    <span>Ecosystem Alerts</span>
+                    {unreadCount > 0 && (
+                      <span className="rounded-full bg-red-500/20 text-red-400 px-2 py-0.5 text-[10px]">
+                        {unreadCount} unread
+                      </span>
+                    )}
+                  </div>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="text-[11px] text-zinc-400 hover:text-white flex items-center gap-1 font-semibold"
+                    >
+                      <CheckCheck className="h-3.5 w-3.5" /> Mark all read
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-80 overflow-y-auto divide-y divide-white/5">
+                  {notifications.length === 0 ? (
+                    <div className="p-8 text-center text-zinc-500">No notifications yet.</div>
+                  ) : (
+                    notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        onClick={() => {
+                          handleToggleRead(n.id, n.read)
+                          setNotifOpen(false)
+                          if (n.type === 'message') navigate('/messages')
+                          else if (n.type === 'review') navigate('/reviews')
+                          else if (n.type === 'quote') navigate('/quotes')
+                          else navigate('/leads')
+                        }}
+                        className={`cursor-pointer p-4 transition flex items-start justify-between gap-3 ${
+                          n.read ? 'bg-transparent opacity-60 hover:opacity-100' : 'bg-red-500/10 hover:bg-red-500/15'
+                        }`}
+                      >
+                        <div className="space-y-1 min-w-0">
+                          <p className="font-bold text-white truncate">{n.title}</p>
+                          <p className="text-zinc-300 text-[11px] line-clamp-2 leading-relaxed">{n.message}</p>
+                          <p className="text-[9px] text-zinc-500">{new Date(n.created_at).toLocaleTimeString()}</p>
+                        </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleToggleRead(n.id, n.read)
+                          }}
+                          className={`p-1.5 rounded-lg shrink-0 ${
+                            n.read ? 'text-zinc-600 hover:text-zinc-400' : 'text-red-400 hover:text-white'
+                          }`}
+                          title={n.read ? 'Mark as Unread' : 'Mark as Read'}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
 
           {/* User Widget */}
           <div className="ml-2 hidden items-center gap-3 border-l border-white/[0.08] pl-4 md:flex">
