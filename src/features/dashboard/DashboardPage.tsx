@@ -84,7 +84,7 @@ export function DashboardPage() {
   const totalLeads = leads.length
   const todayStr = new Date().toISOString().split('T')[0]
 
-  const todaysCalls = calls.filter((c) => c.start_time.startsWith(todayStr)).length
+  const todaysCalls = calls.filter((c) => c.start_time?.startsWith(todayStr)).length
   const pendingCalls = leads.filter((l) => ['new', 'called', 'no_answer', 'busy', 'call_later'].includes(l.status)).length
   const followUpToday = calls.filter((c) => c.follow_up && c.follow_up_date === todayStr).length
   const interestedClients = leads.filter((l) => l.status === 'interested').length
@@ -96,12 +96,13 @@ export function DashboardPage() {
   const currentYearStr = new Date().getFullYear().toString()
 
   const revenueThisMonth = revenues
-    .filter((r) => r.received_date.includes(`-${currentMonthStr}-`) || r.received_date.startsWith(`${currentYearStr}-${currentMonthStr}`))
-    .reduce((acc, r) => acc + r.amount, 0)
+    .filter((r) => r.received_date && (r.received_date.includes(`-${currentMonthStr}-`) || r.received_date.startsWith(`${currentYearStr}-${currentMonthStr}`)))
+    .reduce((acc, r) => acc + (r.amount || 0), 0)
 
   const expensesThisMonth = expenses
-    .filter((e) => e.date.includes(`-${currentMonthStr}-`) || e.date.startsWith(`${currentYearStr}-${currentMonthStr}`))
-    .reduce((acc, e) => acc + e.amount, 0)
+    .filter((e) => e.date && (e.date.includes(`-${currentMonthStr}-`) || e.date.startsWith(`${currentYearStr}-${currentMonthStr}`)))
+    .reduce((acc, e) => acc + (e.amount || 0), 0)
+
 
   const profit = revenueThisMonth - expensesThisMonth
 

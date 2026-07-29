@@ -414,7 +414,7 @@ class MockAuth {
 }
 
 // Proxy wrapper for the Supabase Client
-class ProxySupabase {
+class ProxySupabaseHandler {
   private mockAuth = new MockAuth()
 
   get auth() {
@@ -429,6 +429,25 @@ class ProxySupabase {
       return new MockBuilder(tableName)
     }
     return getRealSupabase().from(tableName)
+  }
+
+  channel(name: string) {
+    if (getDbMode() === 'local') {
+      return {
+        on: () => ({
+          subscribe: () => ({}),
+        }),
+        subscribe: () => ({}),
+      } as any
+    }
+    return getRealSupabase().channel(name)
+  }
+
+  removeChannel(channel: any) {
+    if (getDbMode() === 'local') {
+      return Promise.resolve('ok')
+    }
+    return getRealSupabase().removeChannel(channel)
   }
 }
 
@@ -445,12 +464,25 @@ function getRealSupabase() {
   return realSupabaseClient
 }
 
-export const supabase = new ProxySupabase() as any
+export const supabase = new Proxy(new ProxySupabaseHandler(), {
+  get(target, prop, receiver) {
+    if (prop in target) {
+      return Reflect.get(target, prop, receiver)
+    }
+    const real = getRealSupabase()
+    const val = (real as any)[prop]
+    if (typeof val === 'function') {
+      return val.bind(real)
+    }
+    return val
+  },
+}) as any
 
 // Custom createClient function that returns our proxy or delegates to real client creator
 export function createClient(supabaseUrl: string, supabaseAnonKey: string, options?: any) {
   if (getDbMode() === 'local') {
-    return new ProxySupabase() as any
+    return supabase
   }
   return supabaseCreateClient<Database>(supabaseUrl, supabaseAnonKey, options)
 }
+
