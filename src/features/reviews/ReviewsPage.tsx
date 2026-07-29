@@ -126,7 +126,7 @@ export function ReviewsPage() {
 
       if (error) throw error
 
-      const link = `http://localhost:3000/review?token=${token}`
+      const link = `${window.location.origin}/review?token=${token}`
       setGeneratedLink(link)
     } catch (err: any) {
       alert(`Failed to generate token: ${err.message}`)

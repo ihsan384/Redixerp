@@ -94,7 +94,7 @@ export function InvoiceForm({ invoice, onSave, onCancel }: InvoiceFormProps) {
 
   useEffect(() => {
     supabase.from('leads').select('id,shop_name,phone,address').eq('status','converted').limit(100)
-      .then(({ data }) => { if (data) setLeads(data) })
+      .then(({ data }: { data: any }) => { if (data) setLeads(data) })
   }, [])
 
   const updateItem = useCallback((id: string, field: keyof InvoiceItem, value: number | string) => {
@@ -226,8 +226,8 @@ export function InvoiceForm({ invoice, onSave, onCancel }: InvoiceFormProps) {
                         <div key={key} className={key === 'address' ? 'col-span-2' : ''}>
                           <label className="block text-xs font-semibold text-zinc-400 mb-1.5">{lbl}</label>
                           {key === 'address'
-                            ? <textarea rows={2} value={company[key] as string} onChange={e => setCompany(p => ({...p,[key]:e.target.value}))} placeholder={lbl} />
-                            : <input type="text" value={company[key] as string} onChange={e => setCompany(p => ({...p,[key]:e.target.value}))} placeholder={lbl} />
+                            ? <textarea rows={2} value={(company[key] as string) ?? ''} onChange={e => setCompany(p => ({...p,[key]:e.target.value}))} placeholder={lbl} />
+                            : <input type="text" value={(company[key] as string) ?? ''} onChange={e => setCompany(p => ({...p,[key]:e.target.value}))} placeholder={lbl} />
                           }
                         </div>
                       ))}
@@ -389,7 +389,7 @@ export function InvoiceForm({ invoice, onSave, onCancel }: InvoiceFormProps) {
                           ].map(([key,lbl]) => (
                             <div key={key}>
                               <label className="block text-xs text-zinc-500 mb-1">{lbl}</label>
-                              <input type="text" value={(company as unknown as Record<string,string>)[key]} onChange={e => setCompany(p => ({...p,[key]:e.target.value}))} placeholder={lbl} className="!min-h-[36px] !h-[36px] !rounded-lg" />
+                              <input type="text" value={(company as unknown as Record<string,string>)[key] ?? ''} onChange={e => setCompany(p => ({...p,[key]:e.target.value}))} placeholder={lbl} className="!min-h-[36px] !h-[36px] !rounded-lg" />
                             </div>
                           ))}
                         </div>
