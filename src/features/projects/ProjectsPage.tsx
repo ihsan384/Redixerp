@@ -112,7 +112,7 @@ export function ProjectsPage() {
 
                 <div className="border-t border-white/5 pt-3 flex items-center justify-between text-xs text-zinc-400">
                   <span>Budget: ₹{p.budget?.toLocaleString() || 0}</span>
-                  <span>{new Date(p.created_at).toLocaleDateString()}</span>
+                  <span>{p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A'}</span>
                 </div>
               </div>
             )

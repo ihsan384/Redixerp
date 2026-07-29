@@ -76,7 +76,7 @@ export function TopBar({ onMenuOpen }: TopBarProps) {
 
     const channel = supabase
       .channel('realtime:notifications')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload: { new: Notification }) => {
         setNotifications((prev) => [payload.new as Notification, ...prev])
       })
       .subscribe()
