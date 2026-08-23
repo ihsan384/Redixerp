@@ -28,6 +28,7 @@ import {
   Star,
   Contact as ContactIcon,
   FolderKanban,
+  Globe,
 } from 'lucide-react'
 import { useAuth } from '@/features/auth/AuthContext'
 import { cn } from '@/utils/cn'
@@ -55,10 +56,12 @@ const iconMap = {
   Star,
   ContactIcon,
   FolderKanban,
+  Globe,
 } as const
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard' as const, path: '/' },
+  { id: 'visitors', label: 'Website Visitors', icon: 'Globe' as const, path: '/visitors' },
   { id: 'messages', label: 'Messages Inbox', icon: 'Inbox' as const, path: '/messages' },
   { id: 'reviews', label: 'Reviews', icon: 'Star' as const, path: '/reviews' },
   { id: 'leads', label: 'Leads', icon: 'Users' as const, path: '/leads' },
@@ -88,7 +91,7 @@ const billingSubItems = [
 const navSections = [
   {
     title: 'Ecosystem & Inbox',
-    itemIds: ['dashboard', 'messages', 'reviews'],
+    itemIds: ['dashboard', 'visitors', 'messages', 'reviews'],
   },
   {
     title: 'CRM & Clients',
@@ -116,27 +119,31 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const location = useLocation()
 
   // Dynamic counts for notification badges
-  const [counts, setCounts] = useState({ leads: 0, calls: 0, followUps: 0 })
+  const [counts, setCounts] = useState({ leads: 0, calls: 0, followUps: 0, visitorsToday: 0 })
 
   useEffect(() => {
     const fetchCounts = async () => {
       try {
         const todayStr = new Date().toISOString().split('T')[0]
+        const todayStart = new Date(todayStr).toISOString()
 
         const [
           { count: pendingLeads },
           { count: queueCalls },
-          { count: activeFollowups }
+          { count: activeFollowups },
+          { count: todayVisitors },
         ] = await Promise.all([
           supabase.from('leads').select('count', { count: 'exact', head: true }).eq('status', 'new'),
           supabase.from('leads').select('count', { count: 'exact', head: true }).neq('status', 'converted'),
-          supabase.from('calls').select('count', { count: 'exact', head: true }).eq('follow_up', true).eq('follow_up_date', todayStr)
+          supabase.from('calls').select('count', { count: 'exact', head: true }).eq('follow_up', true).eq('follow_up_date', todayStr),
+          supabase.from('site_visitors').select('count', { count: 'exact', head: true }).gte('created_at', todayStart),
         ])
 
         setCounts({
           leads: pendingLeads || 0,
           calls: queueCalls || 0,
           followUps: activeFollowups || 0,
+          visitorsToday: todayVisitors || 0,
         })
       } catch (e) {
         console.error('Failed to load notification counts:', e)
@@ -153,6 +160,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
     if (id === 'leads' && counts.leads > 0) return counts.leads
     if (id === 'call-center' && counts.calls > 0) return counts.calls
     if (id === 'followups' && counts.followUps > 0) return counts.followUps
+    if (id === 'visitors' && counts.visitorsToday > 0) return counts.visitorsToday
     return null
   }
 

@@ -181,6 +181,27 @@ export interface Notification {
   created_at: string
 }
 
+export interface SiteVisitor {
+  id: string
+  created_at: string
+  visitor_id: string
+  session_id: string
+  page_path: string
+  page_title?: string | null
+  referrer?: string | null
+  screen_resolution?: string | null
+  language?: string | null
+  device_type?: 'mobile' | 'desktop' | 'tablet' | 'bot' | 'other' | string
+  browser?: string | null
+  os?: string | null
+  user_agent?: string | null
+  ip_address?: string | null
+  country?: string | null
+  country_code?: string | null
+  region?: string | null
+  city?: string | null
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -243,6 +264,11 @@ export interface Database {
         Row: Notification
         Insert: Omit<Notification, 'id' | 'created_at'>
         Update: Partial<Omit<Notification, 'id'>>
+      }
+      site_visitors: {
+        Row: SiteVisitor
+        Insert: Omit<SiteVisitor, 'id' | 'created_at'>
+        Update: Partial<Omit<SiteVisitor, 'id'>>
       }
     }
     Views: Record<string, never>

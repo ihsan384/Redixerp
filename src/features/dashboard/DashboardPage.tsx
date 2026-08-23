@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Users,
   Phone,
@@ -11,6 +12,7 @@ import {
   TrendingDown,
   DollarSign,
   Zap,
+  Globe,
 } from 'lucide-react'
 import { KpiCard } from './components/KpiCard'
 import { DailyCallsChart, ConversionChart, RevenueChart } from './components/Charts'
@@ -32,10 +34,14 @@ export function DashboardPage() {
   const [pendingReviewsCount, setPendingReviewsCount] = useState(0)
   const [activeProjectsCount, setActiveProjectsCount] = useState(0)
   const [quotesCount, setQuotesCount] = useState(0)
+  const [visitorsTodayCount, setVisitorsTodayCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
 
   const loadDashboardData = async () => {
     try {
+      const todayStr = new Date().toISOString().split('T')[0]
+      const todayStart = new Date(todayStr).toISOString()
+
       const [
         { data: leadsData },
         { data: callsData },
@@ -46,6 +52,7 @@ export function DashboardPage() {
         { data: revData },
         { data: projData },
         { data: quoteData },
+        { count: visitorCount },
       ] = await Promise.all([
         supabase.from('leads').select('*'),
         supabase.from('calls').select('*'),
@@ -56,6 +63,7 @@ export function DashboardPage() {
         supabase.from('client_reviews').select('*').eq('status', 'pending'),
         supabase.from('projects').select('*'),
         supabase.from('quotes').select('*'),
+        supabase.from('site_visitors').select('count', { count: 'exact', head: true }).gte('created_at', todayStart),
       ])
 
       setLeads((leadsData || []) as Lead[])
@@ -67,6 +75,7 @@ export function DashboardPage() {
       setPendingReviewsCount(revData?.length || 0)
       setActiveProjectsCount(projData?.length || 0)
       setQuotesCount(quoteData?.length || 0)
+      setVisitorsTodayCount(visitorCount || 0)
     } catch (e) {
       console.error(e)
       toast.error('Failed to load dashboard data')
@@ -132,6 +141,22 @@ export function DashboardPage() {
             Here is your agency's pipeline status, collections ledger, and customer outreach metrics today.
           </p>
         </div>
+
+        <Link
+          to="/visitors"
+          className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 transition hover:border-red-500/30 hover:bg-white/[0.08]"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+            <Globe className="w-5 h-5 animate-pulse" />
+          </div>
+          <div className="text-left">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-white">{visitorsTodayCount} Visitors</span>
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            </div>
+            <span className="text-[11px] font-medium text-zinc-400">REDIX.MEDIA Today →</span>
+          </div>
+        </Link>
       </div>
 
       {/* KPI Cards Grid */}

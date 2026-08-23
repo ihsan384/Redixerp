@@ -66,6 +66,9 @@ export function SearchDialog({ isOpen, onClose }: SearchDialogProps) {
   // Quick navigation commands
   const navigationCommands = [
     { id: 'nav-dashboard', label: 'Go to Dashboard', path: '/', category: 'Navigation', icon: ArrowRight },
+    { id: 'nav-visitors', label: 'Go to Website Visitors & Analytics', path: '/visitors', category: 'Navigation', icon: ArrowRight },
+    { id: 'nav-messages', label: 'Go to Messages Inbox', path: '/messages', category: 'Navigation', icon: ArrowRight },
+    { id: 'nav-reviews', label: 'Go to Reviews', path: '/reviews', category: 'Navigation', icon: ArrowRight },
     { id: 'nav-leads', label: 'Go to Leads Page', path: '/leads', category: 'Navigation', icon: ArrowRight },
     { id: 'nav-call-center', label: 'Go to Call Center', path: '/call-center', category: 'Navigation', icon: ArrowRight },
     { id: 'nav-call-history', label: 'Go to Call History', path: '/call-history', category: 'Navigation', icon: ArrowRight },

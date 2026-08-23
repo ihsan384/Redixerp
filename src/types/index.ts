@@ -630,3 +630,5 @@ export interface RequirementQuestionnaireData {
   updated_at: string
 }
 
+export type { SiteVisitor } from './database.types'
+

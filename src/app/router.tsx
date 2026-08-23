@@ -20,6 +20,7 @@ import { BalancePage } from '@/features/balance/BalancePage'
 
 import { MessagesPage } from '@/features/messages/MessagesPage'
 import { ReviewsPage } from '@/features/reviews/ReviewsPage'
+import { VisitorsPage } from '@/features/visitors/VisitorsPage'
 import { ContactsPage } from '@/features/contacts/ContactsPage'
 import { ProjectsPage } from '@/features/projects/ProjectsPage'
 import { QuotesPage } from '@/features/quotes/QuotesPage'
@@ -74,6 +75,8 @@ export function AppRoutes() {
         }
       >
         <Route index element={<DashboardPage />} />
+        <Route path="visitors" element={<VisitorsPage />} />
+        <Route path="analytics" element={<Navigate to="/visitors" replace />} />
         <Route path="messages" element={<MessagesPage />} />
         <Route path="reviews" element={<ReviewsPage />} />
         <Route path="leads" element={<LeadsPage />} />

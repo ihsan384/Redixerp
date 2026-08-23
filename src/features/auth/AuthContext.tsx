@@ -1,4 +1,4 @@
-import { createContext, SetStateAction, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Employee } from '@/types'
 import type { User, Session } from '@supabase/supabase-js'
@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         // Get initial session
-        supabase.auth.getSession().then(({ data: { session: s } }) => {
+        supabase.auth.getSession().then(function ({ data: { session: s } }): void {
             setSession(s)
             setUser(s?.user ?? null)
             if (s?.user) {
@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
 
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, s: SetStateAction<Session | null>) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
             setSession(s)
             setUser(s?.user ?? null)
             if (s?.user) {
